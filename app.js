@@ -16,6 +16,10 @@ const fs = require('fs');
 const helmet = require('helmet');
 const compression = require('compression');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
+const passport = require('passport');
+const { createServer } = require('node:http');
+const { Server } = require('socket.io');
 
 // ********************************
 // ***** Internal Dependencies *****
@@ -28,7 +32,6 @@ const connectDB = require('./config/db');
 const initializePassport = require('./config/passport');
 const sanitize = require('./middlewares/sanitize');
 
-
 // ********************************
 // ***** Database Connection *****
 // ********************************
@@ -38,14 +41,20 @@ connectDB();
 // ***** Express App Initialization *****
 // ********************************
 const app = express();
-
-
+const httpServer = createServer(app);
 
 // ********************************
-// ************ routes ************
+// ***** Socket.io Initialization *****
 // ********************************
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.ALLOWED_ORIGINS.split(','),
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
 
-
+require('./config/socket')(io);
 
 // ********************************
 // ***** Security Middlewares *****
@@ -94,7 +103,12 @@ app.use(
   })
 );
 
-
+// ********************************
+// ***** Authentication *****
+// ********************************
+initializePassport(passport);
+app.use(passport.initialize());
+app.use(passport.session());
 
 // ********************************
 // ***** Request Logging *****
@@ -111,7 +125,9 @@ if (!isProduction) {
 // ********************************
 // ***** API Routes *****
 // ********************************
-
+app.use('/api/v1/auth', require('./routes/authRoutes'));
+app.use('/api/v1/users', require('./routes/userRoutes'));
+app.use('/api/v1/products', require('./routes/productRoutes'));
 
 // ********************************
 // ***** Static Files *****
@@ -138,33 +154,32 @@ app.use(notFound);
 app.use(errorHandler);
 app.use(mongoErrorMiddleware);
 
-
-// ***********************************
-// ***** server setup *****
+// ********************************
+// ***** Server Startup *****
 // ********************************
 const PORT = process.env.PORT || 5000;
 
-process.on("uncaughtException", (err) => {
-  console.log("UNCAUGHT EXCEPTION! 💥 Shutting down...");
-  console.log(err.name, err.message);
+process.on('uncaughtException', (err) => {
+  logger.error('UNCAUGHT EXCEPTION! Shutting down...');
+  logger.error(err.name, err.message);
   process.exit(1);
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 App running on port ${PORT}... `);
+httpServer.listen(PORT, () => {
+  logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
 
-process.on("unhandledRejection", (err) => {
-  console.log("UNHANDLED REJECTION! 💥 Shutting down...");
-  console.log(err.name, err.message);
-  server.close(() => {
+process.on('unhandledRejection', (err) => {
+  logger.error('UNHANDLED REJECTION! Shutting down...');
+  logger.error(err.name, err.message);
+  httpServer.close(() => {
     process.exit(1);
   });
 });
 
-process.on("SIGTERM", () => {
-  console.log("👋 SIGTERM RECEIVED. Shutting down gracefully");
-  server.close(() => {
-    console.log("💥 Process terminated!");
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM RECEIVED. Shutting down gracefully');
+  httpServer.close(() => {
+    logger.info('Process terminated!');
   });
 });
