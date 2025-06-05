@@ -34,6 +34,6 @@ This is a backend API built with **Express.js** for managing a store's inventory
 ## 📦 Installation
 
 ```bash
-git clone https://github.com/your-username/store-inventory-backend.git
+git clone https://github.com/araaancode/backend-inventory.git
 cd store-inventory-backend
 npm install
