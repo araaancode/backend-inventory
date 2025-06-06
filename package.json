@@ -4,7 +4,9 @@
   "description": "this is an api for android application. this application uses this api to sending requests to the server",
   "main": "server.js",
   "scripts": {
-    "test": "jest"
+    "start": "node server.js",
+    "test": "jest",
+    "dev": "nodemon server.js"
   },
   "keywords": [
     "node.js",
@@ -33,9 +35,18 @@
     "csurf": "^1.11.0",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "express-async-handler": "^1.2.0",
+    "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.1",
+    "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
+    "http-status-codes": "^2.3.0",
     "mongoose": "^8.15.1",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "winston": "^3.17.0",
+    "xss": "^1.0.15"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }

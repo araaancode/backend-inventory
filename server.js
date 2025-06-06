@@ -25,7 +25,6 @@ const mongoErrorMiddleware = require('./middlewares/mongoError');
 const rateLimiter = require('./middlewares/rateLimiter');
 const logger = require('./middlewares/logger');
 const connectDB = require('./config/db');
-const initializePassport = require('./config/passport');
 const sanitize = require('./middlewares/sanitize');
 
 
@@ -67,11 +66,12 @@ app.use(
 );
 
 app.use(rateLimiter);
-app.use(sanitize);
+app.use(sanitize());
 app.use(compression({ level: 6 }));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
+app.use(csurf());
 
 // ********************************
 // ***** Session Configuration *****
