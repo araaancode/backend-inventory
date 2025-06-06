@@ -371,16 +371,6 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        userId: user._id,
-        role: user.role || "user", // Include role if exists
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
-    );
-
     // Prepare user data without sensitive information
     const userData = {
       _id: user._id,
@@ -397,7 +387,6 @@ exports.login = async (req, res, next) => {
       message: "ورود با موفقیت انجام شد",
       data: {
         user: userData,
-        token,
       },
     });
   } catch (error) {
@@ -525,7 +514,7 @@ exports.verifyPhoneOTP = async (req, res, next) => {
     if (!phone || !code) {
       return res.status(400).json({
         success: false,
-        message: "شماره همراه و کد تایید ضروری است"
+        message: "شماره همراه و کد تایید ضروری است",
       });
     }
 
@@ -534,7 +523,7 @@ exports.verifyPhoneOTP = async (req, res, next) => {
     if (!phoneRegex.test(phone)) {
       return res.status(400).json({
         success: false,
-        message: "شماره همراه نامعتبر است"
+        message: "شماره همراه نامعتبر است",
       });
     }
 
@@ -544,7 +533,7 @@ exports.verifyPhoneOTP = async (req, res, next) => {
     if (!otpRecord) {
       return res.status(404).json({
         success: false,
-        message: "کد تایید یا منقضی شده یا وجود ندارد"
+        message: "کد تایید یا منقضی شده یا وجود ندارد",
       });
     }
 
@@ -554,25 +543,37 @@ exports.verifyPhoneOTP = async (req, res, next) => {
     if (!isVerified) {
       return res.status(400).json({
         success: false,
-        message: "کد تایید نامعتبر یا منقضی شده"
+        message: "کد تایید نامعتبر یا منقضی شده",
       });
     }
 
     // Mark OTP as used
     await otpRecord.save();
 
+    let user=await User.findOne({phone})
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        role: user.role || "user", // Include role if exists
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+    );
+
     res.status(200).json({
       success: true,
       message: "کد تایید وارد شده درست است",
-      phone
+      phone,
+      token
     });
-
   } catch (error) {
     console.error("OTP verification error:", error);
     res.status(500).json({
       success: false,
       message: "خطا در اعتبارسنجی کد تایید",
-      error: error.message
+      error: error.message,
     });
   }
 };
