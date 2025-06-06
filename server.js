@@ -16,6 +16,8 @@ const fs = require('fs');
 const helmet = require('helmet');
 const compression = require('compression');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
+const csrf = require('csurf');
 
 // ********************************
 // ***** Internal Dependencies *****
@@ -25,7 +27,7 @@ const mongoErrorMiddleware = require('./middlewares/mongoError');
 const rateLimiter = require('./middlewares/rateLimiter');
 const logger = require('./middlewares/logger');
 const connectDB = require('./config/db');
-const sanitize = require('./middlewares/sanitize');
+const { middleware: sanitizeMiddleware } = require('./middlewares/sanitize');
 
 
 // ********************************
@@ -66,12 +68,12 @@ app.use(
 );
 
 app.use(rateLimiter);
-app.use(sanitize());
+app.use(sanitizeMiddleware); // 
 app.use(compression({ level: 6 }));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
-app.use(csurf());
+app.use(csrf());
 
 // ********************************
 // ***** Session Configuration *****

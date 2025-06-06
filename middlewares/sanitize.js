@@ -2,7 +2,7 @@
 const xss = require('xss');
 const { body, query, param } = require('express-validator');
 
-// لیست تگ‌ها و attributeهای مجاز برای sanitize
+// Allowed tags and attributes
 const ALLOWED_ATTRIBUTES = {
   '*': ['class', 'style', 'id'],
   a: ['href', 'title', 'target', 'rel'],
@@ -15,74 +15,48 @@ const ALLOWED_TAGS = [
   'a', 'img', 'div', 'span', 'blockquote'
 ];
 
-// تنظیمات سفارشی برای XSS
+// xss configuration
 const xssOptions = {
   whiteList: ALLOWED_ATTRIBUTES,
   stripIgnoreTag: true,
   stripIgnoreTagBody: ['script', 'style', 'iframe']
 };
 
-/**
- * Middleware برای sanitize کردن تمامی ورودی‌ها
- */
+// Utility function to apply xss only on strings
+const sanitizeValue = (value) =>
+  typeof value === 'string' ? xss(value, xssOptions) : value;
+
+// Middleware: sanitize body, query, and params
 const sanitizeInput = () => [
-  // Sanitize body params
-  body('*').customSanitizer(value => {
-    if (typeof value === 'string') {
-      return xss(value, xssOptions);
-    }
-    return value;
-  }),
-  
-  // Sanitize query params
-  query('*').customSanitizer(value => {
-    if (typeof value === 'string') {
-      return xss(value, xssOptions);
-    }
-    return value;
-  }),
-  
-  // Sanitize route params
-  param('*').customSanitizer(value => {
-    if (typeof value === 'string') {
-      return xss(value, xssOptions);
-    }
-    return value;
-  })
+  body('*').customSanitizer(sanitizeValue),
+  query('*').customSanitizer(sanitizeValue),
+  param('*').customSanitizer(sanitizeValue),
 ];
 
-/**
- * Middleware برای escape کردن کاراکترهای خاص
- */
+// Middleware: escape dangerous characters
 const escapeInput = () => [
   body('*').escape(),
   query('*').escape(),
-  param('*').escape()
+  param('*').escape(),
 ];
 
-/**
- * Middleware برای trim کردن فضاهای خالی
- */
+// Middleware: trim whitespace
 const trimInput = () => [
   body('*').trim(),
   query('*').trim(),
-  param('*').trim()
+  param('*').trim(),
 ];
 
-/**
- * Middleware ترکیبی برای تمامی عملیات sanitize
- */
+// Combined sanitization middleware
 const fullSanitize = () => [
-  trimInput(),
-  escapeInput(),
-  sanitizeInput()
+  ...trimInput(),
+  ...escapeInput(),
+  ...sanitizeInput()
 ];
 
-/**
- * Sanitize برای محتوای HTML (مثل editorها)
- */
-const sanitizeHTML = (html) => {
-  return xss(html, {
+// For direct HTML sanitation (e.g., rich text editors)
+const sanitizeHTML = (html) =>
+  xss(html, {
     ...xssOptions,
     whiteList: {
       ...ALLOWED_ATTRIBUTES,
@@ -90,16 +64,23 @@ const sanitizeHTML = (html) => {
       table: ['border', 'cellspacing', 'cellpadding'],
       tr: ['rowspan'],
       td: ['colspan']
-    },
-    allowList: {
-      ...ALLOWED_TAGS,
-      'iframe': true,
-      'table': true,
-      'tr': true,
-      'td': true,
-      'th': true
     }
   });
+
+// Raw Express middleware (in-place modification)
+const middleware = (req, res, next) => {
+  try {
+    ['body', 'query', 'params'].forEach((key) => {
+      if (req[key]) {
+        Object.entries(req[key]).forEach(([k, v]) => {
+          if (typeof v === 'string') req[key][k] = xss(v, xssOptions);
+        });
+      }
+    });
+    next();
+  } catch (err) {
+    next(err);
+  }
 };
 
 module.exports = {
@@ -108,38 +89,5 @@ module.exports = {
   trimInput,
   fullSanitize,
   sanitizeHTML,
-  middleware: (req, res, next) => {
-    try {
-      // Sanitize body
-      if (req.body) {
-        Object.keys(req.body).forEach(key => {
-          if (typeof req.body[key] === 'string') {
-            req.body[key] = xss(req.body[key], xssOptions);
-          }
-        });
-      }
-
-      // Sanitize query
-      if (req.query) {
-        Object.keys(req.query).forEach(key => {
-          if (typeof req.query[key] === 'string') {
-            req.query[key] = xss(req.query[key], xssOptions);
-          }
-        });
-      }
-
-      // Sanitize params
-      if (req.params) {
-        Object.keys(req.params).forEach(key => {
-          if (typeof req.params[key] === 'string') {
-            req.params[key] = xss(req.params[key], xssOptions);
-          }
-        });
-      }
-
-      next();
-    } catch (err) {
-      next(err);
-    }
-  }
+  middleware,
 };
