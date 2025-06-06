@@ -23,7 +23,6 @@ const USERNAME_MIN_LENGTH = 3;
 const USERNAME_MAX_LENGTH = 20;
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 
-
 // # description -> HTTP VERB -> Accesss
 // # sign token function -> No HTTP VERB -> users
 const signToken = (id) => {
@@ -321,150 +320,92 @@ exports.register = async (req, res, next) => {
 // # login user -> POST -> users
 exports.login = async (req, res, next) => {
   try {
-    const email = req.body.email?.trim();
-    const phone = req.body.phone?.trim();
-    const password = req.body.password.trim();
+    const { login, password } = req.body;
 
-    // Validate input (exclusive email or phone)
-    if (!email && !phone) {
+    // Validate required fields
+    if (!login || !password) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         status: "failure",
-        message: "لطفاً ایمیل یا شماره موبایل خود را وارد کنید",
-        hint: "برای ورود باید یکی از روش‌های احراز هویت را انتخاب کنید",
+        message: "نام کاربری/شماره موبایل و رمز عبور الزامی هستند",
       });
     }
 
-    if (email && phone) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        status: "failure",
-        message: "لطفاً فقط از یک روش برای ورود استفاده کنید",
-        details: {
-          solution: "فقط ایمیل یا فقط شماره موبایل ارسال شود",
-        },
-      });
-    }
+    // Sanitize input
+    const trimmedLogin = login.trim();
+    const normalizedLogin = trimmedLogin.replace(/[\s-]/g, "");
 
-    // Determine identifier type and validate format
-    let identifierType, identifierValue;
-    if (email) {
-      if (!validator.isEmail(email)) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          status: "failure",
-          message: "فرمت ایمیل نامعتبر است",
-          hint: "فرمت صحیح: example@domain.com",
-        });
-      }
-      identifierType = "email";
-      identifierValue = email;
+    // Determine if login is phone or username
+    let isPhone = false;
+    let query = {};
+
+    // Check if input matches phone pattern (English or Persian numbers)
+    const persianToEnglish = normalizedLogin.replace(/[۰-۹]/g, (d) =>
+      "۰۱۲۳۴۵۶۷۸۹".indexOf(d)
+    );
+    if (IRAN_PHONE_REGEX.test(persianToEnglish)) {
+      isPhone = true;
+      query.phone = persianToEnglish;
     } else {
-      if (!validator.isMobilePhone(phone, "fa-IR")) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          status: "failure",
-          message: "فرمت شماره موبایل نامعتبر است",
-          hint: "فرمت صحیح: 09123456789",
-        });
-      }
-      identifierType = "phone";
-      identifierValue = phone;
+      // Treat as username
+      query.username = trimmedLogin.toLowerCase();
     }
 
-    // Find user with password
-    const user = await User.findOne({
-      [identifierType]: identifierValue,
-    }).select("+password +loginAttempts +isLocked +lockUntil");
+    // Find user with password field
+    const user = await User.findOne(query).select("+password");
 
-    // Account lock check
-    if (user?.isLocked) {
-      const remainingTime = Math.ceil(
-        (user.lockUntil - Date.now()) / (60 * 1000)
-      );
-
-      return res.status(StatusCodes.FORBIDDEN).json({
-        status: "failure",
-        message: "حساب کاربری شما موقتاً قفل شده است",
-        details: {
-          remainingLockTime: `${remainingTime} دقیقه`,
-          unlockTime: new Date(user.lockUntil).toLocaleTimeString("fa-IR"),
-        },
-        hint: "برای بازیابی دسترسی با پشتیبانی تماس بگیرید",
-      });
-    }
-
-    // Verify credentials
-    if (!user || !(await user.matchPassword(password))) {
-      // Increment failed attempts
-      if (user) {
-        user.loginAttempts += 1;
-        if (user.loginAttempts >= 5) {
-          user.isLocked = true;
-          user.lockUntil = Date.now() + 30 * 60 * 1000; // 30 minutes lock
-        }
-        await user.save();
-      }
-
-      const remainingAttempts = user ? 5 - user.loginAttempts : 5;
-
+    if (!user) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
         status: "failure",
-        message: "اعتبارسنجی ناموفق بود",
-        details: {
-          remainingAttempts: Math.max(remainingAttempts, 0),
-        },
-        hint:
-          user?.loginAttempts >= 3
-            ? `شما ${user.loginAttempts} بار رمز را اشتباه وارد کرده‌اید. ${
-                remainingAttempts > 0
-                  ? `${remainingAttempts} تلاش باقی مانده`
-                  : "حساب شما قفل خواهد شد"
-              }`
-            : "ایمیل/موبایل یا رمز عبور اشتباه است",
+        message: isPhone
+          ? "کاربری با این شماره موبایل یافت نشد"
+          : "کاربری با این نام کاربری یافت نشد",
       });
     }
 
-    // Reset login attempts on success
-    if (user.loginAttempts > 0 || user.isLocked) {
-      user.loginAttempts = 0;
-      user.isLocked = false;
-      user.lockUntil = undefined;
-      await user.save();
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!user.matchPassword) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({
+        status: "failure",
+        message: "رمز عبور نادرست است",
+      });
     }
 
     // Generate JWT token
     const token = jwt.sign(
       {
         userId: user._id,
-        role: user.role,
-        authMethod: identifierType,
+        role: user.role || "user", // Include role if exists
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
-    // Remove sensitive data before sending user info
-    const {
-      password: _,
-      loginAttempts,
-      isLocked,
-      lockUntil,
-      ...userData
-    } = user.toObject();
+    // Prepare user data without sensitive information
+    const userData = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      phone: user.phone,
+      createdAt: user.createdAt,
+    };
 
+    // Successful login
     return res.status(StatusCodes.OK).json({
       status: "success",
       message: "ورود با موفقیت انجام شد",
-      token,
-      user: userData,
+      data: {
+        user: userData,
+        token,
+      },
     });
   } catch (error) {
     console.error("Login error:", error);
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      status: "failure",
-      message: "خطای سرور در پردازش درخواست",
-      hint: "لطفاً بعداً مجدداً تلاش کنید",
-      ...(process.env.NODE_ENV === "development" && {
-        error: error.message,
-        stack: error.stack,
-      }),
+      status: "error",
+      message: "خطای سرور در هنگام ورود",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
