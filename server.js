@@ -70,7 +70,7 @@ app.use(compression({ level: 6 }));
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
-app.use(csrf());
+// app.use(csrf());
 
 // ********************************
 // ***** Session Configuration *****

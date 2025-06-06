@@ -16,9 +16,13 @@ const Token = require("../../models/Token");
 const OTP = require("../../models/OTP");
 
 // Regular expression for Iranian phone numbers
-const IRAN_PHONE_REGEX = /^09[0-9]{9}$/;
-const MIN_PASSWORD_LENGTH = 8;
 const OTP_EXPIRE_MINUTES = 2;
+const IRAN_PHONE_REGEX = /^(?:(?:09[1-9]\d{8})|(۰۹[۱-۹]\d{8}))$/;
+const MIN_PASSWORD_LENGTH = 8;
+const USERNAME_MIN_LENGTH = 3;
+const USERNAME_MAX_LENGTH = 20;
+const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
+
 
 // # description -> HTTP VERB -> Accesss
 // # sign token function -> No HTTP VERB -> users
@@ -163,79 +167,105 @@ const createSendToken = (user, statusCode, statusMsg, msg, req, res) => {
 // # register user -> POST -> users
 exports.register = async (req, res, next) => {
   try {
-    const { firstName, lastName, phone, email, password } = req.body;
+    const { firstName, lastName, phone, username, password } = req.body;
 
-    // Trim all string inputs
+    // Input sanitization
     const trimmedFirstName = firstName?.trim();
     const trimmedLastName = lastName?.trim();
-    const trimmedEmail = email?.toLowerCase().trim();
-    const trimmedPhone = phone?.trim();
+    const trimmedUsername = username?.trim();
+    const trimmedPhone = phone?.trim().replace(/[\s-]/g, "");
 
     // Validate required fields
     if (!trimmedFirstName || !trimmedLastName) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         status: "failure",
-        message: "نام و نام خانوادگی الزامی هستند.",
+        message: "نام و نام خانوادگی الزامی هستند",
       });
     }
 
     if (!password) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         status: "failure",
-        message: "رمز عبور الزامی است.",
+        message: "رمز عبور الزامی است",
       });
     }
 
-    // Validate either email or phone (exclusive)
-    if (trimmedEmail && trimmedPhone) {
+    // Validate either username or phone (exclusive)
+    if (trimmedUsername && trimmedPhone) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         status: "failure",
-        message: "لطفاً فقط شماره موبایل یا ایمیل وارد کنید، نه هر دو.",
+        message: "لطفاً فقط شماره موبایل یا نام کاربری وارد کنید",
       });
     }
 
-    if (!trimmedEmail && !trimmedPhone) {
+    if (!trimmedUsername && !trimmedPhone) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         status: "failure",
-        message: "وارد کردن شماره موبایل یا ایمیل الزامی است.",
+        message: "وارد کردن شماره موبایل یا نام کاربری الزامی است",
       });
+    }
+
+    // Validate username format
+    if (trimmedUsername) {
+      if (trimmedUsername.length < USERNAME_MIN_LENGTH) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          status: "failure",
+          message: `نام کاربری باید حداقل ${USERNAME_MIN_LENGTH} کاراکتر باشد`,
+        });
+      }
+
+      if (trimmedUsername.length > USERNAME_MAX_LENGTH) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          status: "failure",
+          message: `نام کاربری نمی‌تواند بیشتر از ${USERNAME_MAX_LENGTH} کاراکتر باشد`,
+        });
+      }
+
+      if (!USERNAME_REGEX.test(trimmedUsername)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          status: "failure",
+          message:
+            "نام کاربری فقط می‌تواند شامل حروف انگلیسی، اعداد و زیرخط باشد",
+        });
+      }
     }
 
     // Validate phone format (Iranian format)
-    if (trimmedPhone && !IRAN_PHONE_REGEX.test(trimmedPhone)) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        status: "failure",
-        message: "شماره موبایل معتبر نیست. فرمت صحیح: 09123456789",
-      });
-    }
+    if (trimmedPhone) {
+      // Convert Persian numbers to English if needed
+      const normalizedPhone = trimmedPhone.replace(/[۰-۹]/g, (d) =>
+        "۰۱۲۳۴۵۶۷۸۹".indexOf(d)
+      );
 
-    // Validate email format
-    if (trimmedEmail && !validator.isEmail(trimmedEmail)) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        status: "failure",
-        message: "ایمیل معتبر نیست.",
-      });
+      if (!IRAN_PHONE_REGEX.test(normalizedPhone)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          status: "failure",
+          message: "شماره موبایل معتبر نیست. فرمت صحیح: 09123456789",
+        });
+      }
     }
 
     // Validate password strength
     if (password.length < MIN_PASSWORD_LENGTH) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         status: "failure",
-        message: `رمز عبور باید حداقل ${MIN_PASSWORD_LENGTH} کاراکتر باشد.`,
+        message: `رمز عبور باید حداقل ${MIN_PASSWORD_LENGTH} کاراکتر باشد`,
       });
     }
 
-    // Check if user already exists
-    const query = trimmedEmail
-      ? { email: trimmedEmail }
-      : { phone: trimmedPhone };
-    const existingUser = await User.findOne(query);
+    // Check if user exists by phone or username
+    const existingUser = await User.findOne({
+      $or: [
+        ...(trimmedUsername ? [{ username: trimmedUsername }] : []),
+        ...(trimmedPhone ? [{ phone: trimmedPhone }] : []),
+      ],
+    });
 
     if (existingUser) {
-      const field = trimmedEmail ? "ایمیل" : "شماره موبایل";
+      const field = existingUser.username ? "نام کاربری" : "شماره موبایل";
       return res.status(StatusCodes.CONFLICT).json({
         status: "failure",
-        message: `کاربری با این ${field} قبلاً ثبت‌نام کرده است.`,
+        message: `کاربری با این ${field} قبلاً ثبت‌نام کرده است`,
       });
     }
 
@@ -246,38 +276,42 @@ exports.register = async (req, res, next) => {
     const userData = {
       firstName: trimmedFirstName,
       lastName: trimmedLastName,
-      password,
-      ...(trimmedEmail && { email: trimmedEmail }),
+      password: hashedPassword,
+      ...(trimmedUsername && { username: trimmedUsername }),
       ...(trimmedPhone && { phone: trimmedPhone }),
     };
 
     const newUser = await User.create(userData);
 
-    // Generate JWT token (optional)
+    // Generate JWT token
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN,
+      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
     });
+
+    // Remove sensitive data before sending response
+    const userResponse = {
+      _id: newUser._id,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      username: newUser.username,
+      phone: newUser.phone,
+      createdAt: newUser.createdAt,
+    };
 
     // Successful response
     return res.status(StatusCodes.CREATED).json({
       status: "success",
-      message: "ثبت‌نام با موفقیت انجام شد.",
+      message: "ثبت‌نام با موفقیت انجام شد",
       data: {
-        user: {
-          _id: newUser._id,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-          phone: newUser.phone,
-          email: newUser.email,
-        },
+        user: userResponse,
         token,
       },
     });
   } catch (error) {
-    console.error("خطا در ثبت‌نام:", error);
+    console.error("Registration error:", error);
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      status: "failure",
-      message: "خطای سرور در هنگام ثبت‌نام.",
+      status: "error",
+      message: "خطای سرور در هنگام ثبت‌نام",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
@@ -515,11 +549,11 @@ exports.verifyOtp = async (req, res) => {
 // # description -> HTTP VERB -> Accesss
 // # logout -> GET -> users
 exports.logout = (req, res) => {
-  res.cookie('jwt', 'loggedout', {
-      expires: new Date(Date.now() + 10 * 1000),
-      httpOnly: true
+  res.cookie("jwt", "loggedout", {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true,
   });
-  res.status(200).json({ status: 'success' });
+  res.status(200).json({ status: "success" });
 };
 
 // # description -> HTTP VERB -> Accesss
@@ -621,12 +655,11 @@ exports.resetPassword = async (req, res) => {
     return res.status(StatusCodes.OK).json({
       msg: "گذرواژه با موفقیت تغییر کرد",
     });
-
   } catch (error) {
     console.error("Error in resetPassword:", error);
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       msg: "خطای سرور داخلی",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };

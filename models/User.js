@@ -25,37 +25,34 @@ const userSchema = new mongoose.Schema({
     trim: true,
     minlength: [3, 'Username must be at least 3 characters'],
     maxlength: [20, 'Username must be at most 20 characters'],
-    required: [true, 'Username is required'],
-    unique: true
+    unique: true,
+    sparse: true 
   },
   nationalCode: {
     type: String,
     trim: true,
     match: [/^\d{10}$/, 'National code must be exactly 10 digits'],
-    required: [true, 'National code is required'],
-    unique: true
+    unique: true,
+    sparse: true 
   },
   gender: {
     type: String,
     enum: ['male', 'female', 'other'],
-    required: [true, 'Gender is required'],
   },
   province: {
     type: String,
-    required: [true, 'Province is required'],
     trim: true,
   },
   city: {
     type: String,
-    required: [true, 'City is required'],
     trim: true,
   },
   email: {
     type: String,
     lowercase: true,
     validate: [validator.isEmail, 'Please provide a valid email'],
-    required: [true, 'Email is required'],
     unique: true,
+    sparse: true 
   },
   phone: {
     type: String,
@@ -65,8 +62,8 @@ const userSchema = new mongoose.Schema({
       },
       message: props => `${props.value} is not a valid Iranian mobile number`,
     },
-    required: [true, 'Phone number is required'],
     unique: true,
+    sparse: true 
   },
   avatar: {
     type: String,
