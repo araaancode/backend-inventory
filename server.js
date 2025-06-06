@@ -1,34 +1,33 @@
 // ***********************************
 // ***** Environment Configuration *****
 // ***********************************
-require('dotenv').config({ path: __dirname + '/.env' });
-const isProduction = process.env.NODE_ENV === 'production';
+require("dotenv").config({ path: __dirname + "/.env" });
+const isProduction = process.env.NODE_ENV === "production";
 
 // ********************************
 // ***** External Dependencies *****
 // ********************************
-const express = require('express');
-const path = require('path');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
-const morgan = require('morgan');
-const fs = require('fs');
-const helmet = require('helmet');
-const compression = require('compression');
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
-const csrf = require('csurf');
+const express = require("express");
+const path = require("path");
+const cookieParser = require("cookie-parser");
+const cors = require("cors");
+const morgan = require("morgan");
+const fs = require("fs");
+const helmet = require("helmet");
+const compression = require("compression");
+const session = require("express-session");
+const MongoStore = require("connect-mongo");
+const csrf = require("csurf");
 
 // ********************************
 // ***** Internal Dependencies *****
 // ********************************
-const { notFound, errorHandler } = require('./middlewares/errorMiddleware');
-const mongoErrorMiddleware = require('./middlewares/mongoError');
-const rateLimiter = require('./middlewares/rateLimiter');
-const logger = require('./middlewares/logger');
-const connectDB = require('./config/db');
-const { middleware: sanitizeMiddleware } = require('./middlewares/sanitize');
-
+const { notFound, errorHandler } = require("./middlewares/errorMiddleware");
+const mongoErrorMiddleware = require("./middlewares/mongoError");
+const rateLimiter = require("./middlewares/rateLimiter");
+const logger = require("./middlewares/logger");
+const connectDB = require("./config/db");
+const { middleware: sanitizeMiddleware } = require("./middlewares/sanitize");
 
 // ********************************
 // ***** Database Connection *****
@@ -40,13 +39,11 @@ connectDB();
 // ********************************
 const app = express();
 
-
-
 // ********************************
 // ************ routes ************
 // ********************************
-
-
+// user routes
+const authUserRoutes = require("./routes/users/auth");
 
 // ********************************
 // ***** Security Middlewares *****
@@ -55,23 +52,23 @@ app.use(
   helmet({
     contentSecurityPolicy: isProduction ? undefined : false,
     crossOriginEmbedderPolicy: isProduction,
-    crossOriginResourcePolicy: { policy: 'cross-origin' }
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
 
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS.split(','),
+    origin: process.env.ALLOWED_ORIGINS.split(","),
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   })
 );
 
 app.use(rateLimiter);
-app.use(sanitizeMiddleware); // 
+app.use(sanitizeMiddleware); //
 app.use(compression({ level: 6 }));
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(csrf());
 
@@ -85,18 +82,16 @@ app.use(
     saveUninitialized: false,
     store: MongoStore.create({
       mongoUrl: process.env.MONGO_URI,
-      ttl: 14 * 24 * 60 * 60 // 14 days
+      ttl: 14 * 24 * 60 * 60, // 14 days
     }),
     cookie: {
       secure: isProduction,
       httpOnly: true,
-      sameSite: isProduction ? 'none' : 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 14 // 14 days
-    }
+      sameSite: isProduction ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 14, // 14 days
+    },
   })
 );
-
-
 
 // ********************************
 // ***** Request Logging *****
@@ -107,28 +102,28 @@ app.use((req, res, next) => {
 });
 
 if (!isProduction) {
-  app.use(morgan('dev'));
+  app.use(morgan("dev"));
 }
 
 // ********************************
 // ***** API Routes *****
 // ********************************
-
+app.use("/api/users/auth", authUserRoutes);
 
 // ********************************
 // ***** Static Files *****
 // ********************************
 if (isProduction) {
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
-  app.get('*', (req, res) =>
-    res.sendFile(path.resolve(__dirname, '../frontend/dist/index.html'))
+  app.get("*", (req, res) =>
+    res.sendFile(path.resolve(__dirname, "../frontend/dist/index.html"))
   );
 } else {
-  app.get('/', (req, res) => {
+  app.get("/", (req, res) => {
     res.json({
-      message: 'API is running...',
-      documentation: 'http://localhost:5000/api-docs'
+      message: "API is running...",
+      documentation: "http://localhost:5000/api-docs",
     });
   });
 }
@@ -139,7 +134,6 @@ if (isProduction) {
 app.use(notFound);
 app.use(errorHandler);
 app.use(mongoErrorMiddleware);
-
 
 // ***********************************
 // ***** server setup *****
