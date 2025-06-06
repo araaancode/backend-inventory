@@ -413,19 +413,86 @@ exports.login = async (req, res, next) => {
 // # description -> HTTP VERB -> Accesss
 // # send Otp To phone -> POST -> users
 exports.sendOtpToPhone = async (req, res) => {
-  try {
-    let { phone } = req.body;
-    let user = await User.findOne({ phone });
+  const { phone } = req.body;
 
-    if (user) {
-      await sendOTPCodeToPhoneHandler(phone, user, req, res);
-    } else {
-      res.status(StatusCodes.BAD_REQUEST).json({
-        msg: "کاربر با چنین شماره همراهی یافت نشد",
+  // Validate input
+  if (!phone) {
+    return res.status(400).json({
+      success: false,
+      message: 'شماره همراه ضروری است'
+    });
+  }
+
+  // Validate phone format
+  const phoneRegex = /^09\d{9}$/;
+  if (!phoneRegex.test(phone)) {
+    return res.status(400).json({
+      success: false,
+      message: 'شماره وارد شده نامعتبر است. باید شبیه به'
+    });
+  }
+
+  try {
+    // Delete any existing OTP for this phone
+    await OTP.deleteMany({ phone });
+
+    // Generate new OTP
+    const otpCode = OTP.generateOTP();
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+
+    // Create and save OTP record
+    const otpRecord = new OTP({
+      phone,
+      code: otpCode,
+      otpExpiresAt
+    });
+
+    await otpRecord.save();
+
+    try {
+      sendOTPUtil(otpCode,phone)
+      
+    } catch (smsError) {
+      console.error('SMS sending failed:', smsError);
+      await OTP.deleteOne({ phone }); // Clean up if SMS fails
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send OTP via SMS',
+        error: smsError.message
       });
     }
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP sent successfully',
+      phone,
+      expiresAt: otpExpiresAt
+    });
+
   } catch (error) {
-    console.error(error.message);
+    console.error('Error in sendPhoneOTP:', error);
+
+    // Handle specific error cases
+    if (error.name === 'MongoError' && error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP already exists for this phone'
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    // Generic error response
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP',
+      error: error.message
+    });
   }
 };
 
@@ -448,41 +515,142 @@ exports.sendOtpToEmail = async (req, res) => {
   }
 };
 
-// # description -> HTTP VERB -> Accesss
-// # verify Otp -> POST -> users
-exports.verifyOtp = async (req, res) => {
+//
+// @desc    Verify OTP code for phone
+// @route   POST /api/users/auth/verify-otp
+// @access  Public
+exports.verifyPhoneOTP = async (req, res, next) => {
   try {
-    let { phone, code } = req.body;
+    const { phone } = req.body;
 
-    let userOtp = await OTP.findOne({ phone });
-    let user = await User.findOne({ phone });
-
-    if (userOtp.otpExpiresAt < new Date()) {
-      res.status(StatusCodes.BAD_REQUEST).json({
-        msg: "کد OTP منقضی شده است",
+    // Validate input
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: "شماره همراه ضروری است"
       });
     }
 
-    if (userOtp.code === code) {
-      createSendToken(
-        user,
-        StatusCodes.OK,
-        "success",
-        "کد تایید با موفقیت ارسال شد",
-        req,
-        res
-      );
-    } else {
-      res.status(StatusCodes.BAD_REQUEST).json({
-        msg: "کد وارد شده اشتباه است!",
+    // Validate phone format
+    const phoneRegex = /^09\d{9}$/;
+    if (!phoneRegex.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: "شماره وارد شده نامعتبر است."
       });
     }
+
+    // Delete any existing OTP for this phone
+    await OTP.deleteMany({ phone });
+
+    // Generate new OTP
+    const otpCode = OTP.generateOTP();
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+
+    // Create and save OTP record
+    const otpRecord = new OTP({
+      phone,
+      code: otpCode,
+      otpExpiresAt
+    });
+
+    await otpRecord.save();
+
+    // In production: Implement actual SMS delivery here
+    console.log(`OTP for ${phone}: ${otpCode}`); // Remove in production!
+
+    res.status(200).json({
+      success: true,
+      message: "کد تایید با موفقیت ارسال شد",
+      phone,
+      expiresAt: otpExpiresAt
+    });
+
   } catch (error) {
-    console.error(error.message);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      status: "failure",
-      msg: "خطای داخلی سرور",
-      error,
+    console.error("خطایی در ارسال  کد تایید وجود دارد:", error);
+    
+    // Handle specific error cases
+    if (error.name === 'MongoError' && error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "کد تایید برای این شماره وجود دارد"
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    // Generic error response
+    res.status(500).json({
+      success: false,
+      message: "خطا در ارسال کد تایید",
+      error: error.message
+    });
+  }
+};
+
+//
+// @desc    Resend phone OTP
+// @route   POST /api/users/auth/resend-otp
+// @access  Public
+exports.resendPhoneOTP = async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    // Required field check (with Persian message)
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: "شماره همراه ضروری است" // Phone number is required
+      });
+    }
+
+    // Phone format validation
+    const phoneRegex = /^09\d{9}$/;
+    if (!phoneRegex.test(phone)) {
+      return res.status(400).json({
+        success: false,
+          message: "شماره وارد شده نامعتبر است."
+      });
+    }
+
+    // Delete existing OTPs
+    await OTP.deleteMany({ phone });
+
+    // Generate new OTP
+    const newOTP = OTP.generateOTP();
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+
+    // Create and save new OTP
+    const otpRecord = new OTP({
+      phone,
+      code: newOTP,
+      otpExpiresAt
+    });
+
+    await otpRecord.save();
+
+    // In production: Send SMS here
+    console.log(`OTP for ${phone}: ${newOTP}`); // Remove in production
+
+    res.status(200).json({
+      success: true,
+      message: "کد تایید جدید ساخته شد",
+      phone,
+      expiresAt: otpExpiresAt
+      // Don't include OTP in production
+    });
+
+  } catch (error) {
+    console.error("Resend OTP error:", error);
+    res.status(500).json({
+      success: false,
+      message: "خطا در ارسال مجدد کت تایید",
+      error: error.message
     });
   }
 };

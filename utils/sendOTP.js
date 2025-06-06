@@ -4,6 +4,8 @@ myHeaders.append("Accept", "text/plain");
 myHeaders.append("x-api-key", process.env.SEND_OTP_API_KEY);
 
 const sendOTPUtil = async (otp, phone) => {
+  console.log("otp: ",otp)
+  console.log("phone: ",phone)
   var raw = JSON.stringify({
     mobile: phone,
     templateId: "169619",
