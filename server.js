@@ -49,6 +49,9 @@ const customerApiRoutes = require("./routes/customers/api");
 // seller routes
 const sellerApiRoutes = require("./routes/sellers/api");
 
+// admin routes
+const adminApiRoutes = require("./routes/admins/api");
+
 // ********************************
 // ***** Security Middlewares *****
 // ********************************
@@ -118,6 +121,9 @@ app.use("/api/customers", customerApiRoutes);
 
 // seller routes
 app.use("/api/sellers", sellerApiRoutes);
+
+// admin routes
+app.use("/api/admins", adminApiRoutes);
 
 
 // ********************************
