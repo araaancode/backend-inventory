@@ -3,106 +3,104 @@
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
-    title:{
+    title:{  // نام محصول
         type:String,
         requried:true,
         trim:true,
         min:3,
         max:50
     },
-    description:{
+    description:{ // توضیحات محصول
         type:String,
         requried:true,
         trim:true,
         min:20,
         max:350
     },
-    photo:{
+    photo:{ // عکس محصول
         type:String,
     },
-    photos:{
+    photos:{ // عکس های محصول
+        type:String,
+    }, 
+    productCode:{  // کد کالا
         type:String,
     },
-    productCode:{
+    mainCategory:{  // گروه اصلی
         type:String,
     },
-    mainCategory:{
+    subCategory:{  // گروه فعلی
         type:String,
     },
-    subCategory:{
+    hashtags:{  // هشتگ ها
         type:String,
     },
-    unit:{
+    unit:{ // واحد شمارش
         type:String,
     },
-    hasSecondaryUnit:{
+    hasSecondaryUnit:{ // بررسی وجود واحد فرعی
         type:Boolean,
     },
-    secondaryUnit:{
+    secondaryUnit:{ // واحد فرعی
         type:String,
     },
-    secondaryUnitRatio:{
+    secondaryUnitRatio:{ // ضریب شمارش واحد فرعی
         type:String,
     },
    
-    initialStock:{
+    initialStock:{ // موجودی اولیه واحد اصلی
         type:String,
     },
-    initialSecondaryStock:{
+    initialSecondaryStock:{ // موجودی اولیه واحد فرعی
         type:String,
     },
-    purchasePrice:{
+    purchasePrice:{ // قیمت خرید واحد اصلی
         type:String,
     },
-    sellPrice:{
+    sellPrice:{ // قیمت فروش واحد اصلی
         type:String,
     },
-    sellPrice:{
+    purchasePriceSecondary:{  // قیمت خرید واحد فرعی
         type:String,
     },
-    purchasePriceSecondary:{
+    sellPriceSecondary:{  // قیمت فروش واحد فرعی
         type:String,
     },
-    sellPriceSecondary:{
+   
+    secondSellPrice:{ // قیمت فروش دوم واحد اصلی
         type:String,
     },
-    sellPriceSecondary:{
+    secondSellPriceSecondary:{ // قیمت فروش دوم واحد فرعی
         type:String,
     },
-    secondSellPrice:{
+    invoiceDescription:{  // شرح فاکتور
         type:String,
     },
-    secondSellPriceSecondary:{
+    barcode:{ // بارکد
         type:String,
     },
-    invoiceDescription:{
+    minExpireWarningDays:{ // حداقل روز برای هشدار تاریخ انقضا
         type:String,
     },
-    barcode:{
+    minStock:{  // حداقل موجوی کالا
         type:String,
     },
-    minExpireWarningDays:{
+    vatPercent:{  // درصد مالیات بر ارزش افزوده
         type:String,
     },
-    minStock:{
+    weight:{ // وزن به گرم
         type:String,
     },
-    vatPercent:{
+    length:{ // طول به میلی متر
         type:String,
     },
-    weight:{
+    width:{ // عرض به میلی متر
         type:String,
     },
-    length:{
+    height:{ // ارتفاع به میلی متر
         type:String,
     },
-    width:{
-        type:String,
-    },
-    height:{
-        type:String,
-    },
-    moreInfo:{
+    moreInfo:{ // اطلاعات اضافی
         type:String,
     },
     
