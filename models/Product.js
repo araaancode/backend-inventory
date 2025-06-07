@@ -1,109 +1,282 @@
 // models/Product.js
-
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-const productSchema = new mongoose.Schema({
-    title:{  // نام محصول
-        type:String,
-        requried:true,
-        trim:true,
-        min:3,
-        max:50
+const productSchema = new Schema({
+    // 1. Core Product Information
+    title: {
+        type: String,
+        required: [true, 'Product title is required'],
+        trim: true,
+        minlength: [3, 'Title must be at least 3 characters'],
+        maxlength: [50, 'Title cannot exceed 50 characters'],
+        index: true
     },
-    description:{ // توضیحات محصول
-        type:String,
-        requried:true,
-        trim:true,
-        min:20,
-        max:350
+    description: {
+        type: String,
+        required: [true, 'Product description is required'],
+        trim: true,
+        minlength: [20, 'Description must be at least 20 characters'],
+        maxlength: [350, 'Description cannot exceed 350 characters']
     },
-    photo:{ // عکس محصول
-        type:String,
+
+    // 2. Visual Assets
+    photo: {
+        type: String,
+        default: '',
+        validate: {
+            validator: (url) => !url || /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i.test(url),
+            message: 'Invalid photo URL format'
+        }
     },
-    photos:{ // عکس های محصول
-        type:String,
-    }, 
-    productCode:{  // کد کالا
-        type:String,
+    photos: [{
+        type: String,
+        validate: {
+            validator: (url) => /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i.test(url),
+            message: 'Invalid image URL format'
+        }
+    }],
+
+    // 3. Identification Codes
+    productCode: {
+        type: String,
+        trim: true,
+        uppercase: true,
+        unique: true,
+        sparse: true
     },
-    mainCategory:{  // گروه اصلی
-        type:String,
+    barcode: {
+        type: String,
+        trim: true,
+        unique: true,
+        sparse: true
     },
-    subCategory:{  // گروه فعلی
-        type:String,
+
+    // 4. Categorization
+    mainCategory: {
+        type: String,
+        trim: true,
+        required: true,
+        index: true
     },
-    hashtags:{  // هشتگ ها
-        type:String,
+    subCategory: {
+        type: String,
+        trim: true,
+        index: true
     },
-    unit:{ // واحد شمارش
-        type:String,
+    hashtags: {
+        type: String,
+        trim: true,
+        set: (value) => value.replace(/\s+/g, '').toLowerCase()
     },
-    hasSecondaryUnit:{ // بررسی وجود واحد فرعی
-        type:Boolean,
+
+    // 5. Inventory Units
+    unit: {
+        type: String,
+        trim: true,
+        required: true,
+        enum: ['piece', 'kg', 'g', 'L', 'm', 'box', 'pack'],
+        default: 'piece'
     },
-    secondaryUnit:{ // واحد فرعی
-        type:String,
+    hasSecondaryUnit: {
+        type: Boolean,
+        default: false
     },
-    secondaryUnitRatio:{ // ضریب شمارش واحد فرعی
-        type:String,
+    secondaryUnit: {
+        type: String,
+        trim: true,
+        validate: {
+            validator: function(value) {
+                return !this.hasSecondaryUnit || !!value;
+            },
+            message: 'Secondary unit is required when hasSecondaryUnit is true'
+        }
     },
-   
-    initialStock:{ // موجودی اولیه واحد اصلی
-        type:String,
+    secondaryUnitRatio: {
+        type: Number,
+        min: [0.01, 'Ratio must be at least 0.01'],
+        validate: {
+            validator: function(value) {
+                return !this.hasSecondaryUnit || !!value;
+            },
+            message: 'Secondary unit ratio is required when hasSecondaryUnit is true'
+        }
     },
-    initialSecondaryStock:{ // موجودی اولیه واحد فرعی
-        type:String,
+
+    // 6. Stock Information
+    initialStock: {
+        type: Number,
+        default: 0,
+        min: [0, 'Stock cannot be negative']
     },
-    purchasePrice:{ // قیمت خرید واحد اصلی
-        type:String,
+    initialSecondaryStock: {
+        type: Number,
+        default: 0,
+        min: [0, 'Stock cannot be negative']
     },
-    sellPrice:{ // قیمت فروش واحد اصلی
-        type:String,
+    minStock: {
+        type: Number,
+        default: 0,
+        min: [0, 'Minimum stock cannot be negative']
     },
-    purchasePriceSecondary:{  // قیمت خرید واحد فرعی
-        type:String,
+
+    // 7. Pricing Structure
+    purchasePrice: {
+        type: Number,
+        min: [0, 'Price cannot be negative'],
+        get: (price) => (price || 0).toFixed(2)
     },
-    sellPriceSecondary:{  // قیمت فروش واحد فرعی
-        type:String,
+    sellPrice: {
+        type: Number,
+        required: true,
+        min: [0, 'Price cannot be negative'],
+        get: (price) => (price || 0).toFixed(2)
     },
-   
-    secondSellPrice:{ // قیمت فروش دوم واحد اصلی
-        type:String,
+    purchasePriceSecondary: {
+        type: Number,
+        min: [0, 'Price cannot be negative'],
+        get: (price) => (price || 0).toFixed(2)
     },
-    secondSellPriceSecondary:{ // قیمت فروش دوم واحد فرعی
-        type:String,
+    sellPriceSecondary: {
+        type: Number,
+        min: [0, 'Price cannot be negative'],
+        get: (price) => (price || 0).toFixed(2)
     },
-    invoiceDescription:{  // شرح فاکتور
-        type:String,
+    secondSellPrice: {
+        type: Number,
+        min: [0, 'Price cannot be negative'],
+        get: (price) => (price || 0).toFixed(2)
     },
-    barcode:{ // بارکد
-        type:String,
+    secondSellPriceSecondary: {
+        type: Number,
+        min: [0, 'Price cannot be negative'],
+        get: (price) => (price || 0).toFixed(2)
     },
-    minExpireWarningDays:{ // حداقل روز برای هشدار تاریخ انقضا
-        type:String,
+    vatPercent: {
+        type: Number,
+        default: 0,
+        min: [0, 'VAT cannot be negative'],
+        max: [100, 'VAT cannot exceed 100%']
     },
-    minStock:{  // حداقل موجوی کالا
-        type:String,
+
+    // 8. Logistics
+    weight: {
+        type: Number,
+        min: [0, 'Weight cannot be negative']
     },
-    vatPercent:{  // درصد مالیات بر ارزش افزوده
-        type:String,
+    length: {
+        type: Number,
+        min: [0, 'Length cannot be negative']
     },
-    weight:{ // وزن به گرم
-        type:String,
+    width: {
+        type: Number,
+        min: [0, 'Width cannot be negative']
     },
-    length:{ // طول به میلی متر
-        type:String,
+    height: {
+        type: Number,
+        min: [0, 'Height cannot be negative']
     },
-    width:{ // عرض به میلی متر
-        type:String,
+
+    // 9. Documentation
+    invoiceDescription: {
+        type: String,
+        trim: true,
+        maxlength: [200, 'Invoice description too long']
     },
-    height:{ // ارتفاع به میلی متر
-        type:String,
+    minExpireWarningDays: {
+        type: Number,
+        min: [0, 'Days cannot be negative']
     },
-    moreInfo:{ // اطلاعات اضافی
-        type:String,
+    moreInfo: {
+        type: String,
+        trim: true
     },
+
+    // 10. System Fields
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+        immutable: true
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
+    }
+
+}, {
+    timestamps: true,
+    toJSON: {
+        virtuals: true,
+        getters: true,
+        transform: function(doc, ret) {
+            delete ret.__v; // Remove version key
+            return ret;
+        }
+    },
+    toObject: {
+        virtuals: true,
+        getters: true
+    }
+});
+
+// ======================
+// VIRTUAL FIELDS
+// ======================
+productSchema.virtual('movements', {
+    ref: 'InventoryMovement',
+    localField: '_id',
+    foreignField: 'product',
+    options: {
+        sort: { createdAt: -1 },
+        limit: 50
+    }
+});
+
+productSchema.virtual('inventory', {
+    ref: 'Inventory',
+    localField: '_id',
+    foreignField: 'product'
+});
+
+// ======================
+// INSTANCE METHODS
+// ======================
+productSchema.methods.getTotalStock = async function() {
+    const inventoryRecords = await mongoose.model('Inventory').find({ product: this._id });
+    return inventoryRecords.reduce((total, inv) => total + inv.currentStock, 0);
+};
+
+// ======================
+// MIDDLEWARE
+// ======================
+productSchema.pre('save', function(next) {
+    this.updatedAt = Date.now();
     
-}, { timestamps: true });
+    // Auto-generate product code if not provided
+    if (!this.productCode) {
+        this.productCode = `PRD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    }
+    
+    next();
+});
+
+productSchema.post('save', function(doc, next) {
+    // Create default inventory record if none exists
+    mongoose.model('Inventory').updateOne(
+        { product: doc._id },
+        { $setOnInsert: { 
+            product: doc._id,
+            warehouse: 'default-warehouse-id', // Set your default warehouse
+            currentStock: doc.initialStock,
+            currentSecondaryStock: doc.initialSecondaryStock || 0
+        }},
+        { upsert: true }
+    ).exec();
+    next();
+});
 
 module.exports = mongoose.model('Product', productSchema);
