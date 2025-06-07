@@ -2,7 +2,7 @@ const express = require("express")
 
 const router = express()
 
-const userAuthCtrls = require("../../controllers/users/auth")
+const userAuthCtrls = require("../../controllers/customers/auth")
 
 router.post('/login', userAuthCtrls.login)
 router.post('/register', userAuthCtrls.register)

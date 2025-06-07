@@ -1,55 +1,64 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
-const asyncHandler = require("express-async-handler");
+// middleware/auth.js
+const { UnauthenticatedError, ForbiddenError } = require('../errors');
+const jwt = require('jsonwebtoken');
 
-exports.authUser = asyncHandler(async (req, res, next) => {
-  let token;
+// 1. Authentication Middleware
+const authenticateUser = async (req, res, next) => {
+  // Check for token
   const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new UnauthenticatedError();
+  }
 
-  if (authHeader && authHeader.startsWith("Bearer")) {
-    try {
-      // extract token from authHeader string
-      token = authHeader.split(" ")[1];
+  const token = authHeader.split(' ')[1];
 
-      // verified token returns user id
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  try {
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Attach user to request
+    req.user = {
+      userId: decoded.userId,
+      role: decoded.role,
+      email: decoded.email
+    };
+    
+    next();
+  } catch (error) {
+    throw new UnauthenticatedError('Invalid authentication token');
+  }
+};
 
-      // find user's obj in db and assign to req.user
-      let user = await User.findById(decoded.id).select("-password");
-      if (user) {
-        req.user = user;
-        next();
-      } else {
-        res.send("you not allowed to do this !!!");
-      }
-    } catch (error) {
-      res.status(401);
-      throw new Error("Not authorized, invalid token");
+// 2. Role Authorization Middleware
+const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      throw new ForbiddenError();
     }
-  }
-
-  if (!token) {
-    res.status(401);
-    throw new Error("Not authorized, no token found");
-  }
-});
-
-exports.isUser = asyncHandler(async (req, res, next) => {
-  if (req.user && req.user.role === "client") next();
-  else res.status(403).json({ message: "Access denied" });
-});
-
-exports.isExpert = (req, res, next) => {
-  if (req.user && req.user.role === "expert") next();
-  else res.status(403).json({ message: "Access denied" });
+    next();
+  };
 };
 
-exports.isAdmin = (req, res, next) => {
-  if (req.user && req.user.role === "admin") next();
-  else res.status(403).json({ message: "Access denied" });
+// 3. Ownership Check Middleware (for seller-owned resources)
+const checkOwnership = (model, paramName = 'id') => {
+  return async (req, res, next) => {
+    const resource = await model.findById(req.params[paramName]);
+    
+    if (!resource) {
+      throw new NotFoundError('Resource');
+    }
+
+    // Check if user is owner (assuming resources have 'seller' field)
+    if (resource.seller.toString() !== req.user.userId) {
+      throw new ForbiddenError();
+    }
+    
+    next();
+  };
 };
 
-exports.isSuperadmin = (req, res, next) => {
-  if (req.user && req.user.role === "superadmin") next();
-  else res.status(403).json({ message: "Access denied" });
+module.exports = {
+  authenticateUser,
+  authorizeRoles,
+  checkOwnership
 };
