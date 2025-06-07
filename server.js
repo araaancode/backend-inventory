@@ -43,7 +43,11 @@ const app = express();
 // ************ routes ************
 // ********************************
 // customer routes
-const authCustomerRoutes = require("./routes/customers/auth");
+const customerAuthRoutes = require("./routes/customers/auth");
+const customerApiRoutes = require("./routes/customers/api");
+
+// seller routes
+const sellerApiRoutes = require("./routes/sellers/api");
 
 // ********************************
 // ***** Security Middlewares *****
@@ -108,7 +112,13 @@ if (!isProduction) {
 // ********************************
 // ***** API Routes *****
 // ********************************
-app.use("/api/customers/auth", authCustomerRoutes);
+// customer routes
+app.use("/api/customers/auth", customerAuthRoutes);
+app.use("/api/customers", customerApiRoutes);
+
+// seller routes
+app.use("/api/sellers", sellerApiRoutes);
+
 
 // ********************************
 // ***** Static Files *****
