@@ -1,282 +1,199 @@
-// models/Product.js
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
+const mongoose = require("mongoose");
+const validator = require("validator");
 
-const productSchema = new Schema({
-    // 1. Core Product Information
+const subGroupSchema = new mongoose.Schema({
+  whichMainGroup: {
+    type: mongoose.Schema.ObjectId,
+    ref: "ProductGroup",
+    required: [true, "Subgroup must belong to a main group"],
+    validate: {
+      validator: async function(value) {
+        const group = await mongoose.model('ProductGroup').findById(value);
+        return group !== null;
+      },
+      message: "No product group found with this ID"
+    }
+  }
+});
+
+
+const productGroupSchema = new mongoose.Schema({
+  mainGroup: {
+    type: String,
+    required: [true, "Main group is required"],
+    trim: true,
+    maxlength: [50, "Main group name cannot exceed 50 characters"]
+  },
+  subGroup: {
+    type: subGroupSchema,
+    validate: {
+      validator: function(value) {
+        return value.whichMainGroup !== undefined;
+      },
+      message: "Subgroup must reference a valid main group"
+    }
+  },
+  hashtag: {
+    type: String,
+    trim: true,
+    maxlength: [30, "Hashtag cannot exceed 30 characters"],
+    validate: {
+      validator: function(value) {
+        if (!value) return true;
+        return value.startsWith('#') && value.length > 1;
+      },
+      message: "Hashtag must start with # and contain at least one character"
+    }
+  }
+});
+
+const secondaryUnitSchema = new mongoose.Schema({
+  countingUnit: {
+    type: String,
+    required: [true, "Counting unit is required"],
+    trim: true,
+    maxlength: [20, "Counting unit cannot exceed 20 characters"]
+  },
+  subunitRatio: {
+    type: Number,
+    required: [true, "Subunit ratio is required"],
+    min: [0.01, "Subunit ratio must be greater than 0"]
+  },
+  openingInventoryMainUnit: {
+    type: Number,
+    default: 0,
+    min: [0, "Opening inventory cannot be negative"]
+  },
+  openingInventorySubUnit: {
+    type: Number,
+    default: 0,
+    min: [0, "Opening inventory cannot be negative"]
+  },
+  purchasePriceMainUnit: {
+    type: Number,
+    default: 0,
+    min: [0, "Purchase price cannot be negative"]
+  },
+  purchasePriceSubUnit: {
+    type: Number,
+    default: 0,
+    min: [0, "Purchase price cannot be negative"]
+  },
+  sellingPriceMainUnit: {
+    type: Number,
+    default: 0,
+    min: [0, "Selling price cannot be negative"]
+  },
+  sellingPriceSubUnit: {
+    type: Number,
+    default: 0,
+    min: [0, "Selling price cannot be negative"]
+  },
+  secondSellingMainUnit: {
+    type: Number,
+    default: 0,
+    min: [0, "Second selling price cannot be negative"]
+  },
+  secondSellingSubUnit: {
+    type: Number,
+    default: 0,
+    min: [0, "Second selling price cannot be negative"]
+  }
+});
+
+const moreInfoSchema = new mongoose.Schema({
+  additionalInformation: {
+    type: String,
+    trim: true,
+    maxlength: [500, "Additional information cannot exceed 500 characters"]
+  },
+  factorDescription: {
+    type: String,
+    trim: true,
+    maxlength: [200, "Factor description cannot exceed 200 characters"]
+  },
+  barcode: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(value) {
+        if (!value) return true;
+        return validator.isNumeric(value) && value.length >= 8 && value.length <= 13;
+      },
+      message: "Barcode must be 8-13 numeric characters"
+    }
+  },
+  minExpireWarningDays: {
+    type: Number,
+    min: [0, "Minimum expire warning days cannot be negative"]
+  },
+  minStock: {
+    type: Number,
+    min: [0, "Minimum stock cannot be negative"]
+  },
+  vatPercent: {
+    type: Number,
+    min: [0, "VAT percentage cannot be negative"],
+    max: [100, "VAT percentage cannot exceed 100%"]
+  },
+  weight: {
+    type: Number,
+    min: [0, "Weight cannot be negative"]
+  },
+  length: {
+    type: Number,
+    min: [0, "Length cannot be negative"]
+  },
+  width: {
+    type: Number,
+    min: [0, "Width cannot be negative"]
+  },
+  height: {
+    type: Number,
+    min: [0, "Height cannot be negative"]
+  }
+});
+
+const productSchema = new mongoose.Schema(
+  {
     title: {
-        type: String,
-        required: [true, 'Product title is required'],
-        trim: true,
-        minlength: [3, 'Title must be at least 3 characters'],
-        maxlength: [50, 'Title cannot exceed 50 characters'],
-        index: true
+      type: String,
+      required: [true, "Product title is required"],
+      trim: true,
+      minlength: [3, "Product title must be at least 3 characters"],
+      maxlength: [50, "Product title cannot exceed 50 characters"]
     },
-    description: {
-        type: String,
-        required: [true, 'Product description is required'],
-        trim: true,
-        minlength: [20, 'Description must be at least 20 characters'],
-        maxlength: [350, 'Description cannot exceed 350 characters']
-    },
-
-    // 2. Visual Assets
-    photo: {
-        type: String,
-        default: '',
-        validate: {
-            validator: (url) => !url || /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i.test(url),
-            message: 'Invalid photo URL format'
-        }
-    },
-    photos: [{
-        type: String,
-        validate: {
-            validator: (url) => /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i.test(url),
-            message: 'Invalid image URL format'
-        }
-    }],
-
-    // 3. Identification Codes
     productCode: {
-        type: String,
-        trim: true,
-        uppercase: true,
-        unique: true,
-        sparse: true
+      type: String,
+      unique: true,
+      trim: true,
+      validate: {
+        validator: function(value) {
+          if (!value) return true;
+          return /^[A-Za-z0-9\-_]+$/.test(value);
+        },
+        message: "Product code can only contain letters, numbers, hyphens, and underscores"
+      }
     },
-    barcode: {
-        type: String,
-        trim: true,
-        unique: true,
-        sparse: true
+    productGroup: {
+      type: productGroupSchema,
+      required: [true, "Product group is required"]
     },
-
-    // 4. Categorization
-    mainCategory: {
-        type: String,
-        trim: true,
-        required: true,
-        index: true
+    countingUnit: {
+      type: String,
+      required: [true, "Counting unit is required"],
+      trim: true,
+      maxlength: [20, "Counting unit cannot exceed 20 characters"]
     },
-    subCategory: {
-        type: String,
-        trim: true,
-        index: true
-    },
-    hashtags: {
-        type: String,
-        trim: true,
-        set: (value) => value.replace(/\s+/g, '').toLowerCase()
-    },
-
-    // 5. Inventory Units
-    unit: {
-        type: String,
-        trim: true,
-        required: true,
-        enum: ['piece', 'kg', 'g', 'L', 'm', 'box', 'pack'],
-        default: 'piece'
-    },
-    hasSecondaryUnit: {
-        type: Boolean,
-        default: false
-    },
-    secondaryUnit: {
-        type: String,
-        trim: true,
-        validate: {
-            validator: function(value) {
-                return !this.hasSecondaryUnit || !!value;
-            },
-            message: 'Secondary unit is required when hasSecondaryUnit is true'
-        }
-    },
-    secondaryUnitRatio: {
-        type: Number,
-        min: [0.01, 'Ratio must be at least 0.01'],
-        validate: {
-            validator: function(value) {
-                return !this.hasSecondaryUnit || !!value;
-            },
-            message: 'Secondary unit ratio is required when hasSecondaryUnit is true'
-        }
-    },
-
-    // 6. Stock Information
-    initialStock: {
-        type: Number,
-        default: 0,
-        min: [0, 'Stock cannot be negative']
-    },
-    initialSecondaryStock: {
-        type: Number,
-        default: 0,
-        min: [0, 'Stock cannot be negative']
-    },
-    minStock: {
-        type: Number,
-        default: 0,
-        min: [0, 'Minimum stock cannot be negative']
-    },
-
-    // 7. Pricing Structure
-    purchasePrice: {
-        type: Number,
-        min: [0, 'Price cannot be negative'],
-        get: (price) => (price || 0).toFixed(2)
-    },
-    sellPrice: {
-        type: Number,
-        required: true,
-        min: [0, 'Price cannot be negative'],
-        get: (price) => (price || 0).toFixed(2)
-    },
-    purchasePriceSecondary: {
-        type: Number,
-        min: [0, 'Price cannot be negative'],
-        get: (price) => (price || 0).toFixed(2)
-    },
-    sellPriceSecondary: {
-        type: Number,
-        min: [0, 'Price cannot be negative'],
-        get: (price) => (price || 0).toFixed(2)
-    },
-    secondSellPrice: {
-        type: Number,
-        min: [0, 'Price cannot be negative'],
-        get: (price) => (price || 0).toFixed(2)
-    },
-    secondSellPriceSecondary: {
-        type: Number,
-        min: [0, 'Price cannot be negative'],
-        get: (price) => (price || 0).toFixed(2)
-    },
-    vatPercent: {
-        type: Number,
-        default: 0,
-        min: [0, 'VAT cannot be negative'],
-        max: [100, 'VAT cannot exceed 100%']
-    },
-
-    // 8. Logistics
-    weight: {
-        type: Number,
-        min: [0, 'Weight cannot be negative']
-    },
-    length: {
-        type: Number,
-        min: [0, 'Length cannot be negative']
-    },
-    width: {
-        type: Number,
-        min: [0, 'Width cannot be negative']
-    },
-    height: {
-        type: Number,
-        min: [0, 'Height cannot be negative']
-    },
-
-    // 9. Documentation
-    invoiceDescription: {
-        type: String,
-        trim: true,
-        maxlength: [200, 'Invoice description too long']
-    },
-    minExpireWarningDays: {
-        type: Number,
-        min: [0, 'Days cannot be negative']
-    },
-    moreInfo: {
-        type: String,
-        trim: true
-    },
-
-    // 10. System Fields
-    isActive: {
-        type: Boolean,
-        default: true
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now,
-        immutable: true
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-
-}, {
+    secondaryUnit: secondaryUnitSchema,
+    moreInfo: moreInfoSchema
+  },
+  { 
     timestamps: true,
-    toJSON: {
-        virtuals: true,
-        getters: true,
-        transform: function(doc, ret) {
-            delete ret.__v; // Remove version key
-            return ret;
-        }
-    },
-    toObject: {
-        virtuals: true,
-        getters: true
-    }
-});
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
+);
 
-// ======================
-// VIRTUAL FIELDS
-// ======================
-productSchema.virtual('movements', {
-    ref: 'InventoryMovement',
-    localField: '_id',
-    foreignField: 'product',
-    options: {
-        sort: { createdAt: -1 },
-        limit: 50
-    }
-});
-
-productSchema.virtual('inventory', {
-    ref: 'Inventory',
-    localField: '_id',
-    foreignField: 'product'
-});
-
-// ======================
-// INSTANCE METHODS
-// ======================
-productSchema.methods.getTotalStock = async function() {
-    const inventoryRecords = await mongoose.model('Inventory').find({ product: this._id });
-    return inventoryRecords.reduce((total, inv) => total + inv.currentStock, 0);
-};
-
-// ======================
-// MIDDLEWARE
-// ======================
-productSchema.pre('save', function(next) {
-    this.updatedAt = Date.now();
-    
-    // Auto-generate product code if not provided
-    if (!this.productCode) {
-        this.productCode = `PRD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    }
-    
-    next();
-});
-
-productSchema.post('save', function(doc, next) {
-    // Create default inventory record if none exists
-    mongoose.model('Inventory').updateOne(
-        { product: doc._id },
-        { $setOnInsert: { 
-            product: doc._id,
-            warehouse: 'default-warehouse-id', // Set your default warehouse
-            currentStock: doc.initialStock,
-            currentSecondaryStock: doc.initialSecondaryStock || 0
-        }},
-        { upsert: true }
-    ).exec();
-    next();
-});
-
-module.exports = mongoose.model('Product', productSchema);
+// Fix the model name (it was incorrectly exporting as 'User')
+module.exports = mongoose.model("Product", productSchema);
