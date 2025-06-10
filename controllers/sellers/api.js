@@ -49,22 +49,9 @@ exports.getSingleFactors = async (req, res) => {
 exports.createFactor = async (req, res) => {
   try {
 
-    // Validate at least one product or service
-    if (
-      (!req.body.products || req.body.products.length === 0) &&
-      (!req.body.services || req.body.services.length === 0)
-    ) {
-      return res.status(400).json({
-        status: "error",
-        message: "Factor must contain at least one product or service",
-      });
-    }
 
-
-    
-
-    const newFactor = await Factor.create({
-      seller:req.userId,
+    res.json({
+      seller:"684755695a9955ec1da33dfd",
       customer:req.body.customer,
       factorDate:req.body.factorDate,
       products:req.body.products,
@@ -72,14 +59,37 @@ exports.createFactor = async (req, res) => {
       tax:req.body.tax,
       factorType:req.body.factorType,
       totalPrice
-    });
+    })
 
-    res.status(201).json({
-      status: "success",
-      data: {
-        factor: newFactor,
-      },
-    });
+    // // Validate at least one product or service
+    // if (
+    //   (!req.body.products || req.body.products.length === 0) &&
+    //   (!req.body.services || req.body.services.length === 0)
+    // ) {
+    //   return res.status(400).json({
+    //     status: "error",
+    //     message: "Factor must contain at least one product or service",
+    //   });
+    // }
+
+
+    // const newFactor = await Factor.create({
+      // seller:req.userId,
+      // customer:req.body.customer,
+      // factorDate:req.body.factorDate,
+      // products:req.body.products,
+      // services:req.body.services,
+      // tax:req.body.tax,
+      // factorType:req.body.factorType,
+      // totalPrice
+    // });
+
+    // res.status(201).json({
+    //   status: "success",
+    //   data: {
+    //     factor: newFactor,
+    //   },
+    // });
   } catch (err) {
     if (err.name === "ValidationError") {
       const messages = Object.values(err.errors).map((val) => val.message);
