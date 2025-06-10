@@ -363,55 +363,61 @@ exports.createProduct = async (req, res) => {
       ? req.file.path.replace("public", "")
       : undefined;
 
-    res.json({
-      seller:  req.user.id,
+    // declare variables
+    var productGroupObj = {};
+    var secondaryUnitObj = {};
+    var moreInfoObj = {};
+
+    var subGroupObj = {};
+
+    subGroupObj.whichMainGroup = req.body.whichMainGroup;
+
+    // assign the product group values
+    productGroupObj.mainGroup = req.body.mainGroup;
+    productGroupObj.subGroup = subGroupObj;
+    productGroupObj.hashtag = req.body.hashtag;
+
+    // assign the secondary unit values
+    secondaryUnitObj.secondaryUnitCountingUnit =
+      req.body.secondaryUnitCountingUnit;
+    secondaryUnitObj.subunitRatio = req.body.subunitRatio;
+    secondaryUnitObj.openingInventoryMainUnit =
+      req.body.openingInventoryMainUnit;
+    secondaryUnitObj.openingInventorySubUnit = req.body.openingInventorySubUnit;
+    secondaryUnitObj.purchasePriceMainUnit = req.body.purchasePriceMainUnit;
+    secondaryUnitObj.purchasePriceSubUnit = req.body.purchasePriceSubUnit;
+    secondaryUnitObj.sellingPriceMainUnit = req.body.sellingPriceMainUnit;
+    secondaryUnitObj.sellingPriceSubUnit = req.body.sellingPriceSubUnit;
+    secondaryUnitObj.secondSellingMainUnit = req.body.secondSellingMainUnit;
+    secondaryUnitObj.secondSellingSubUnit = req.body.secondSellingSubUnit;
+
+    // assign the more info values
+    moreInfoObj.additionalInformation = req.body.additionalInformation;
+    moreInfoObj.factorDescription = req.body.factorDescription;
+    moreInfoObj.barcode = req.body.barcode;
+    moreInfoObj.minExpireWarningDays = req.body.minExpireWarningDays;
+    moreInfoObj.minStock = req.body.minStock;
+    moreInfoObj.vatPercent = req.body.vatPercent;
+    moreInfoObj.weight = req.body.weight;
+    moreInfoObj.length = req.body.length;
+    moreInfoObj.width = req.body.width;
+    moreInfoObj.height = req.body.height;
+
+    await Product.create({
+      image: productPath || "default.jpg",
+      seller: req.user.id,
       title: req.body.title,
       productCode: req.body.productCode,
+      productGroup: productGroupObj,
+      countingUnit: req.body.countingUnit,
+      secondaryUnit: secondaryUnitObj,
+      moreInfo: moreInfoObj,
     });
 
-    console.log("sellerId: ", req.user.id);
-
-    // await Product.create({
-    //   image: productPath || "default.jpg",
-    //   seller: req.userId,
-    //   title: req.body.title,
-    //   productCode: req.body.productCode,
-    //   productGroup: {
-    //     mainGroup: req.body.productGroup.mainGroup,
-    //     subGroup: req.body.productGroup.subGroup,
-    //     hashtag: req.body.productGroup.hashtag,
-    //   },
-    //   countingUnit: req.body.countingUnit,
-    //   secondaryUnit: {
-    //     secondaryUnitCountingUnit: req.body.secondaryUnit.secondaryUnitCountingUnit,
-    //     subunitRatio: req.body.secondaryUnit.subunitRatio,
-    //     openingInventoryMainUnit: req.body.secondaryUnit.openingInventoryMainUnit,
-    //     openingInventorySubUnit: req.body.secondaryUnit.openingInventorySubUnit,
-    //     purchasePriceMainUnit: req.body.secondaryUnit.purchasePriceMainUnit,
-    //     purchasePriceSubUnit: req.body.secondaryUnit.purchasePriceSubUnit,
-    //     sellingPriceMainUnit: req.body.secondaryUnit.sellingPriceMainUnit,
-    //     sellingPriceSubUnit: req.body.secondaryUnit.sellingPriceSubUnit,
-    //     secondSellingMainUnit: req.body.secondaryUnit.secondSellingMainUnit,
-    //     secondSellingSubUnit: req.body.secondaryUnit.secondSellingSubUnit,
-    //   },
-    //   moreInfo: {
-    //     additionalInformation: req.body.moreInfo.additionalInformation,
-    //     factorDescription: req.body.moreInfo.factorDescription,
-    //     barcode: req.body.moreInfo.barcode,
-    //     minExpireWarningDays: req.body.moreInfo.minExpireWarningDays,
-    //     minStock: req.body.moreInfo.minStock,
-    //     vatPercent: req.body.moreInfo.vatPercent,
-    //     weight: req.body.moreInfo.weight,
-    //     length: req.body.moreInfo.length,
-    //     width: req.body.moreInfo.width,
-    //     height: req.body.moreInfo.height,
-    //   },
-    // });
-
-    // res.status(httpStatus.OK).json({
-    //   msg: " محصول شما ایجاد شد",
-    //   status: "success",
-    // });
+    res.status(httpStatus.OK).json({
+      msg: " محصول شما ایجاد شد",
+      status: "success",
+    });
   } catch (err) {
     console.log(err);
     res.status(httpStatus.INTERNAL_SERVER_ERROR).json({

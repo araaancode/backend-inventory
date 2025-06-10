@@ -36,15 +36,10 @@ const productGroupSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: [30, "Hashtag cannot exceed 30 characters"],
-    validate: {
-      validator: function (value) {
-        if (!value) return true;
-        return value.startsWith("#") && value.length > 1;
-      },
-      message: "Hashtag must start with # and contain at least one character",
-    },
   },
 });
+
+
 
 const secondaryUnitSchema = new mongoose.Schema({
   countingUnit: {
