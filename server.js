@@ -125,7 +125,7 @@ app.use("/api/customers/auth", customerAuthRoutes);
 
 // seller routes
 app.use("/api/sellers/auth", sellerAuthRoutes);
-// app.use("/api/sellers", sellerApiRoutes);
+app.use("/api/sellers", sellerApiRoutes);
 
 // admin routes
 // app.use("/api/admins", adminApiRoutes);
