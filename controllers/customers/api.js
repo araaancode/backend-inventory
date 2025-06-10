@@ -2,6 +2,8 @@ const Product = require('../../models/Product');
 const Customer = require('../../models/User');
 const { NotFoundError } = require('../../errors');
 
+
+
 // @desc    Get all products (customer view)
 // @route   GET /api/customer/products
 // @access  Customer

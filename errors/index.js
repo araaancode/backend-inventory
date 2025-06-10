@@ -14,14 +14,14 @@ class NotFoundError extends CustomAPIError {
 }
 
 class UnauthenticatedError extends CustomAPIError {
-  constructor(message = "Authentication required") {
+  constructor(message = "شما باید ابتدا احراز هویت شوید") {
     super(message);
     this.statusCode = 401;
   }
 }
 
 class ForbiddenError extends CustomAPIError {
-  constructor(message = "Not authorized to access this route") {
+  constructor(message = "شما حق دسترسی به اینجا را ندارید") {
     super(message);
     this.statusCode = 403;
   }
