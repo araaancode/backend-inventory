@@ -134,3 +134,110 @@ exports.login = async (req, res) => {
     });
   }
 };
+
+
+// # description -> HTTP VERB -> Accesss
+// # login guest -> POST -> guests
+exports.loginGuest = async (req, res) => {
+  try {
+    // 1. Generate device ID or use provided one
+    const deviceId = req.body.deviceId || `guest_${crypto.randomBytes(8).toString('hex')}`;
+    const guestPrefix = `guest_${deviceId.slice(0, 6)}`;
+    const fakePhone = `09${crypto.randomBytes(4).toString('hex').slice(0, 8)}`; // Valid Iranian format
+
+    // 2. Create guest user without modifying schema
+    const guestUser = await User.findOneAndUpdate(
+      { 
+        $or: [
+          { deviceId }, // For existing guests
+          { username: guestPrefix } // Fallback for legacy guests
+        ],
+        role: 'customer'
+      },
+      {
+        $setOnInsert: {
+          storeName: `GuestStore_${deviceId.slice(0,4)}`,
+          username: guestPrefix,
+          phone: fakePhone,
+          password: crypto.randomBytes(16).toString('hex'), // Hashed by pre-save hook
+          passwordConfirm: crypto.randomBytes(16).toString('hex'), // Temporary bypass
+          role: 'customer',
+          isActive: true,
+          deviceId // Will be saved despite not being in schema (non-strict)
+        }
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+        strict: false // Allows saving deviceId temporarily
+      }
+    );
+
+    // 3. Clean up temporary fields
+    if (guestUser.isNew) {
+      guestUser.passwordConfirm = undefined;
+      await guestUser.save({ validateBeforeSave: false });
+    }
+
+    // 4. Generate token (matches your existing auth system)
+    const token = jwt.sign(
+      {
+        id: guestUser._id,
+        role: guestUser.role,
+        isGuest: true, // Custom flag for frontend
+        iat: Math.floor(Date.now() / 1000)
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+        algorithm: 'HS256'
+      }
+    );
+
+    // 5. Prepare response (respects schema's select:false)
+    const responseData = {
+      _id: guestUser._id,
+      role: guestUser.role,
+      isGuest: true,
+      avatar: guestUser.avatar || 'default.jpg',
+      storeName: guestUser.storeName,
+      createdAt: guestUser.createdAt,
+      deviceId // Returned but not stored long-term
+    };
+
+    return res.status(StatusCodes.OK).json({
+      status: 'success',
+      msg: 'ورود مهمان موفقیت‌آمیز بود',
+      token,
+      user: responseData
+    });
+
+  } catch (error) {
+    console.error('Guest login error:', error);
+
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(StatusCodes.CONFLICT).json({
+        status: 'failure',
+        msg: 'این دستگاه قبلاً ثبت شده است',
+        solution: 'ارسال deviceId متفاوت یا استفاده از ورود معمولی'
+      });
+    }
+
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        status: 'failure',
+        msg: 'خطا در داده‌های مهمان',
+        errors: Object.values(error.errors).map(e => e.message)
+      });
+    }
+
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      status: 'failure',
+      msg: 'خطای سرور در ورود مهمان',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};

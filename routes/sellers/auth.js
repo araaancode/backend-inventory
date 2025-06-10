@@ -24,6 +24,10 @@ router.post(
   sellerAuthCtrls.login
 );
 
+// login guest
+router.post('/guest', sellerAuthCtrls.loginGuest);
+
+
 // router.post("/forgot-password", sellerAuthCtrls.forgotPassword);
 // router.post("/reset-password", sellerAuthCtrls.resetPassword);
 // router.get("/logout", sellerAuthCtrls.logout);

@@ -51,6 +51,18 @@ const userSchema = new mongoose.Schema(
     passwordResetToken: String,
     passwordResetExpires: Date,
 
+    deviceId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
+    isGuest: {
+      type: Boolean,
+      default: false
+    },
+
+
     phone: {
       type: String,
       validate: {

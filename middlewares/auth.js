@@ -57,8 +57,20 @@ const checkOwnership = (model, paramName = 'id') => {
   };
 };
 
+// 3. Block Guests to some of routes 
+const blockGuests = (req, res, next) => {
+  if (req.user?.isGuest) {
+    return res.status(StatusCodes.FORBIDDEN).json({
+      status: 'failure',
+      msg: 'لطفاً برای دسترسی به این بخش ثبت‌نام کامل انجام دهید'
+    });
+  }
+  next();
+};
+
 module.exports = {
   authenticateUser,
   authorizeRoles,
-  checkOwnership
+  checkOwnership,
+  blockGuests
 };
