@@ -1,5 +1,4 @@
 const Product = require('../../models/Product');
-const Inventory = require('../../models/Inventory');
 const { NotFoundError, BadRequestError } = require('../../errors');
 
 // @desc    Get all seller's products

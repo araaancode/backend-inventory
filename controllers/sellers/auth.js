@@ -164,154 +164,97 @@ const createSendToken = (user, statusCode, statusMsg, msg, req, res) => {
 
 // # description -> HTTP VERB -> Accesss
 // # register user -> POST -> users
-exports.register = async (req, res, next) => {
+exports.register = async (req, res) => {
   try {
-    const { firstName, lastName, phone, username, password } = req.body;
+    const { storeName, username, phone, password, passwordConfirm } = req.body;
 
-    // Input sanitization
-    const trimmedFirstName = firstName?.trim();
-    const trimmedLastName = lastName?.trim();
-    const trimmedUsername = username?.trim();
-    const trimmedPhone = phone?.trim().replace(/[\s-]/g, "");
-
-    // Validate required fields
-    if (!trimmedFirstName || !trimmedLastName) {
+    // 1. Basic validation
+    if (!storeName || !username || !phone || !password || !passwordConfirm) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         status: "failure",
-        message: "نام و نام خانوادگی الزامی هستند",
+        msg: "تمام فیلدها باید وارد شوند",
+        missingFields: {
+          storeName: !storeName,
+          username: !username,
+          phone: !phone,
+          password: !password,
+          passwordConfirm: !passwordConfirm
+        }
       });
     }
 
-    if (!password) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        status: "failure",
-        message: "رمز عبور الزامی است",
-      });
-    }
-
-    // Validate either username or phone (exclusive)
-    if (trimmedUsername && trimmedPhone) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        status: "failure",
-        message: "لطفاً فقط شماره موبایل یا نام کاربری وارد کنید",
-      });
-    }
-
-    if (!trimmedUsername && !trimmedPhone) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        status: "failure",
-        message: "وارد کردن شماره موبایل یا نام کاربری الزامی است",
-      });
-    }
-
-    // Validate username format
-    if (trimmedUsername) {
-      if (trimmedUsername.length < USERNAME_MIN_LENGTH) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          status: "failure",
-          message: `نام کاربری باید حداقل ${USERNAME_MIN_LENGTH} کاراکتر باشد`,
-        });
-      }
-
-      if (trimmedUsername.length > USERNAME_MAX_LENGTH) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          status: "failure",
-          message: `نام کاربری نمی‌تواند بیشتر از ${USERNAME_MAX_LENGTH} کاراکتر باشد`,
-        });
-      }
-
-      if (!USERNAME_REGEX.test(trimmedUsername)) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          status: "failure",
-          message:
-            "نام کاربری فقط می‌تواند شامل حروف انگلیسی، اعداد و زیرخط باشد",
-        });
-      }
-    }
-
-    // Validate phone format (Iranian format)
-    if (trimmedPhone) {
-      // Convert Persian numbers to English if needed
-      const normalizedPhone = trimmedPhone.replace(/[۰-۹]/g, (d) =>
-        "۰۱۲۳۴۵۶۷۸۹".indexOf(d)
-      );
-
-      if (!IRAN_PHONE_REGEX.test(normalizedPhone)) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          status: "failure",
-          message: "شماره موبایل معتبر نیست. فرمت صحیح: 09123456789",
-        });
-      }
-    }
-
-    // Validate password strength
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        status: "failure",
-        message: `رمز عبور باید حداقل ${MIN_PASSWORD_LENGTH} کاراکتر باشد`,
-      });
-    }
-
-    // Check if user exists by phone or username
+    // 2. Check if user exists (both phone and username)
     const existingUser = await User.findOne({
-      $or: [
-        ...(trimmedUsername ? [{ username: trimmedUsername }] : []),
-        ...(trimmedPhone ? [{ phone: trimmedPhone }] : []),
-      ],
+      $or: [{ phone }, { username }]
     });
 
     if (existingUser) {
-      const field = existingUser.username ? "نام کاربری" : "شماره موبایل";
+      const conflictField = existingUser.phone === phone ? "phone" : "username";
       return res.status(StatusCodes.CONFLICT).json({
         status: "failure",
-        message: `کاربری با این ${field} قبلاً ثبت‌نام کرده است`,
+        msg: `کاربر با این ${conflictField === "phone" ? "شماره تلفن" : "نام کاربری"} موجود است`,
+        conflictField
       });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Create new user
-    const userData = {
-      firstName: trimmedFirstName,
-      lastName: trimmedLastName,
-      password: hashedPassword,
-      ...(trimmedUsername && { username: trimmedUsername }),
-      ...(trimmedPhone && { phone: trimmedPhone }),
-    };
-
-    const newUser = await User.create(userData);
-
-    // Generate JWT token
-    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+    // 3. Create new seller (let Mongoose handle passwordConfirm validation)
+    const newSeller = await User.create({
+      storeName,
+      username,
+      phone,
+      password,
+      passwordConfirm,
+      role: "seller"
     });
 
-    // Remove sensitive data before sending response
-    const userResponse = {
-      _id: newUser._id,
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      username: newUser.username,
-      phone: newUser.phone,
-      createdAt: newUser.createdAt,
+    // 4. Generate JWT token (with additional security checks)
+    const token = jwt.sign(
+      {
+        id: newSeller._id,
+        role: newSeller.role,
+        iat: Math.floor(Date.now() / 1000) // issued at
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+        algorithm: "HS256"
+      }
+    );
+
+    // 5. Prepare response (remove sensitive data)
+    const sellerResponse = {
+      _id: newSeller._id,
+      storeName: newSeller.storeName,
+      username: newSeller.username,
+      phone: newSeller.phone,
+      role: newSeller.role,
+      avatar: newSeller.avatar,
+      createdAt: newSeller.createdAt
     };
 
-    // Successful response
     return res.status(StatusCodes.CREATED).json({
       status: "success",
-      message: "ثبت‌نام با موفقیت انجام شد",
-      data: {
-        user: userResponse,
-        token,
-      },
+      msg: "فروشنده با موفقیت ثبت نام شد",
+      seller: sellerResponse,
+      token
     });
+
   } catch (error) {
-    console.error("Registration error:", error);
+    // Handle Mongoose validation errors specifically
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors).map(el => el.message);
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        status: "failure",
+        msg: "خطا در اعتبارسنجی داده‌ها",
+        errors: process.env.NODE_ENV === "development" ? errors : undefined
+      });
+    }
+
+    console.error("خطا در ثبت نام فروشنده:", error);
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      status: "error",
-      message: "خطای سرور در هنگام ثبت‌نام",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      status: "failure",
+      msg: "خطای سرور در هنگام ثبت نام",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined
     });
   }
 };
@@ -326,7 +269,7 @@ exports.login = async (req, res, next) => {
     if (!login || !password) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         status: "failure",
-        message: "نام کاربری/شماره موبایل و رمز عبور الزامی هستند",
+        msg: "نام کاربری/شماره موبایل و رمز عبور الزامی هستند",
       });
     }
 
@@ -356,7 +299,7 @@ exports.login = async (req, res, next) => {
     if (!user) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
         status: "failure",
-        message: isPhone
+        msg: isPhone
           ? "کاربری با این شماره موبایل یافت نشد"
           : "کاربری با این نام کاربری یافت نشد",
       });
@@ -367,7 +310,7 @@ exports.login = async (req, res, next) => {
     if (!user.matchPassword) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
         status: "failure",
-        message: "رمز عبور نادرست است",
+        msg: "رمز عبور نادرست است",
       });
     }
 
@@ -384,7 +327,7 @@ exports.login = async (req, res, next) => {
     // Successful login
     return res.status(StatusCodes.OK).json({
       status: "success",
-      message: "ورود با موفقیت انجام شد",
+      msg: "ورود با موفقیت انجام شد",
       data: {
         user: userData,
       },
@@ -392,8 +335,8 @@ exports.login = async (req, res, next) => {
   } catch (error) {
     console.error("Login error:", error);
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      status: "error",
-      message: "خطای سرور در هنگام ورود",
+      status: "failure",
+      msg: "خطای سرور در هنگام ورود",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
@@ -408,7 +351,7 @@ exports.sendOtpToPhone = async (req, res) => {
   if (!phone) {
     return res.status(400).json({
       success: false,
-      message: "شماره همراه ضروری است",
+      msg: "شماره همراه ضروری است",
     });
   }
 
@@ -417,7 +360,7 @@ exports.sendOtpToPhone = async (req, res) => {
   if (!phoneRegex.test(phone)) {
     return res.status(400).json({
       success: false,
-      message: "شماره وارد شده نامعتبر است. باید شبیه به",
+      msg: "شماره وارد شده نامعتبر است. باید شبیه به",
     });
   }
 
@@ -445,14 +388,14 @@ exports.sendOtpToPhone = async (req, res) => {
       await OTP.deleteOne({ phone }); // Clean up if SMS fails
       return res.status(500).json({
         success: false,
-        message: "Failed to send OTP via SMS",
+        msg: "Failed to send OTP via SMS",
         error: smsError.message,
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "OTP sent successfully",
+      msg: "OTP sent successfully",
       phone,
       expiresAt: otpExpiresAt,
     });
@@ -463,21 +406,21 @@ exports.sendOtpToPhone = async (req, res) => {
     if (error.name === "MongoError" && error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: "OTP already exists for this phone",
+        msg: "OTP already exists for this phone",
       });
     }
 
     if (error.name === "ValidationError") {
       return res.status(400).json({
         success: false,
-        message: error.message,
+        msg: error.message,
       });
     }
 
     // Generic error response
     return res.status(500).json({
       success: false,
-      message: "Failed to send OTP",
+      msg: "Failed to send OTP",
       error: error.message,
     });
   }
@@ -514,7 +457,7 @@ exports.verifyPhoneOTP = async (req, res, next) => {
     if (!phone || !code) {
       return res.status(400).json({
         success: false,
-        message: "شماره همراه و کد تایید ضروری است",
+        msg: "شماره همراه و کد تایید ضروری است",
       });
     }
 
@@ -523,7 +466,7 @@ exports.verifyPhoneOTP = async (req, res, next) => {
     if (!phoneRegex.test(phone)) {
       return res.status(400).json({
         success: false,
-        message: "شماره همراه نامعتبر است",
+        msg: "شماره همراه نامعتبر است",
       });
     }
 
@@ -533,7 +476,7 @@ exports.verifyPhoneOTP = async (req, res, next) => {
     if (!otpRecord) {
       return res.status(404).json({
         success: false,
-        message: "کد تایید یا منقضی شده یا وجود ندارد",
+        msg: "کد تایید یا منقضی شده یا وجود ندارد",
       });
     }
 
@@ -543,14 +486,14 @@ exports.verifyPhoneOTP = async (req, res, next) => {
     if (!isVerified) {
       return res.status(400).json({
         success: false,
-        message: "کد تایید نامعتبر یا منقضی شده",
+        msg: "کد تایید نامعتبر یا منقضی شده",
       });
     }
 
     // Mark OTP as used
     await otpRecord.save();
 
-    let user=await User.findOne({phone})
+    let user = await User.findOne({ phone });
 
     // Generate JWT token
     const token = jwt.sign(
@@ -564,15 +507,15 @@ exports.verifyPhoneOTP = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: "کد تایید وارد شده درست است",
+      msg: "کد تایید وارد شده درست است",
       phone,
-      token
+      token,
     });
   } catch (error) {
     console.error("OTP verification error:", error);
     res.status(500).json({
       success: false,
-      message: "خطا در اعتبارسنجی کد تایید",
+      msg: "خطا در اعتبارسنجی کد تایید",
       error: error.message,
     });
   }
@@ -590,7 +533,7 @@ exports.resendPhoneOTP = async (req, res) => {
     if (!phone) {
       return res.status(400).json({
         success: false,
-        message: "شماره همراه ضروری است", // Phone number is required
+        msg: "شماره همراه ضروری است", // Phone number is required
       });
     }
 
@@ -599,7 +542,7 @@ exports.resendPhoneOTP = async (req, res) => {
     if (!phoneRegex.test(phone)) {
       return res.status(400).json({
         success: false,
-        message: "شماره وارد شده نامعتبر است.",
+        msg: "شماره وارد شده نامعتبر است.",
       });
     }
 
@@ -623,7 +566,7 @@ exports.resendPhoneOTP = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "کد تایید جدید ساخته شد",
+      msg: "کد تایید جدید ساخته شد",
       phone,
       expiresAt: otpExpiresAt,
       // Don't include OTP in production
@@ -632,7 +575,7 @@ exports.resendPhoneOTP = async (req, res) => {
     console.error("Resend OTP error:", error);
     res.status(500).json({
       success: false,
-      message: "خطا در ارسال مجدد کت تایید",
+      msg: "خطا در ارسال مجدد کت تایید",
       error: error.message,
     });
   }
@@ -698,16 +641,16 @@ exports.forgotPassword = async (req, res) => {
 // # reset password -> POST -> users
 exports.resetPassword = async (req, res) => {
   try {
-    const { userId, token, password, confirmPassword } = req.body;
+    const { userId, token, password, passwordConfirm } = req.body;
 
     // Validate input
-    if (!userId || !token || !password || !confirmPassword) {
+    if (!userId || !token || !password || !passwordConfirm) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         msg: "تمام فیلدهای الزامی را پر کنید",
       });
     }
 
-    if (password !== confirmPassword) {
+    if (password !== passwordConfirm) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         msg: "گذرواژه و تأیید گذرواژه مطابقت ندارند",
       });

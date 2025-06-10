@@ -7,7 +7,6 @@ const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema(
   {
-    // =============================================== required fields ===============================================
     avatar: {
       type: String,
       default: "default.jpg",
@@ -61,48 +60,6 @@ const userSchema = new mongoose.Schema(
         message: (props) =>
           `${props.value} is not a valid Iranian mobile number`,
       },
-      unique: true,
-      sparse: true,
-    },
-
-    // =============================================== end of required fileds ===============================================
-
-    firstName: {
-      type: String,
-      trim: true,
-      minlength: 2,
-      maxlength: 50,
-    },
-    lastName: {
-      type: String,
-      trim: true,
-      minlength: 2,
-      maxlength: 50,
-    },
-
-    nationalCode: {
-      type: String,
-      trim: true,
-      match: [/^\d{10}$/, "National code must be exactly 10 digits"],
-      unique: true,
-      sparse: true,
-    },
-    gender: {
-      type: String,
-      enum: ["male", "female", "other"],
-    },
-    province: {
-      type: String,
-      trim: true,
-    },
-    city: {
-      type: String,
-      trim: true,
-    },
-    email: {
-      type: String,
-      lowercase: true,
-      validate: [validator.isEmail, "Please provide a valid email"],
       unique: true,
       sparse: true,
     },

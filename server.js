@@ -118,14 +118,14 @@ if (!isProduction) {
 // ********************************
 // customer routes
 app.use("/api/customers/auth", customerAuthRoutes);
-app.use("/api/customers", customerApiRoutes);
+// app.use("/api/customers", customerApiRoutes);
 
 // seller routes
 app.use("/api/sellers/auth", sellerAuthRoutes);
-app.use("/api/sellers", sellerApiRoutes);
+// app.use("/api/sellers", sellerApiRoutes);
 
 // admin routes
-app.use("/api/admins", adminApiRoutes);
+// app.use("/api/admins", adminApiRoutes);
 
 
 // ********************************
