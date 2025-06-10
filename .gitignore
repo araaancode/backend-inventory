@@ -138,4 +138,5 @@ dist
 =======
 .env
 node_modules
+public
 >>>>>>> 8149271 (first commit -> (add two models))
