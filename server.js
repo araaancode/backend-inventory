@@ -53,6 +53,9 @@ const sellerApiRoutes = require("./routes/sellers/api");
 // admin routes
 const adminApiRoutes = require("./routes/admins/api");
 
+
+
+
 // ********************************
 // ***** Security Middlewares *****
 // ********************************
@@ -133,8 +136,10 @@ app.use("/api/sellers/auth", sellerAuthRoutes);
 // ********************************
 if (isProduction) {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
+  app.use(express.static('public'))
 
-  app.get("*", (req, res) =>
+
+  app.get("*", (req, res) =>   
     res.sendFile(path.resolve(__dirname, "../frontend/dist/index.html"))
   );
 } else {
