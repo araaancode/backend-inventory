@@ -56,4 +56,54 @@ router.delete(
   sellerApiCtrls.deleteProduct
 );
 
+
+
+// ************************************************************************
+// ******************************* Services *******************************
+// ************************************************************************
+
+router.get(
+  "/services",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllServices
+);
+
+router.get(
+  "/services/:serviceId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getSingleService
+);
+
+router.post(
+  "/services",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.createService
+);
+
+router.put(
+  "/services/:serviceId/update-service",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.updateService
+);
+
+router.put(
+  "/services/:serviceId/update-service-image",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.updateServiceImage
+);
+
+router.delete(
+  "/services/:serviceId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.deleteService
+);
+
 module.exports = router;

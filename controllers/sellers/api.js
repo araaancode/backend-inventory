@@ -1,5 +1,6 @@
 const Factor = require("../../models/Factor");
 const Product = require("../../models/Product");
+const Service = require("../../models/Service");
 const httpStatus = require("http-status-codes");
 
 // *********************************************************************************
@@ -10,7 +11,7 @@ const httpStatus = require("http-status-codes");
 // # get all seller factors -> GET -> sellers (PRIVATE)
 exports.getAllFactors = async (req, res) => {
   try {
-    const factors = await Factor.find({ seller: req.userId }).populate(
+    const factors = await Factor.find({ seller: req.user.id }).populate(
       "customer products services seller"
     );
 
@@ -35,7 +36,7 @@ exports.getSingleFactors = async (req, res) => {
   try {
     const factor = await Factor.findOne({
       _id: req.params.factorId,
-      seller: req.userId,
+      seller: req.user.id,
     }).populate("customer products services seller");
 
     res.status(httpStatus.OK).json({
@@ -79,7 +80,7 @@ exports.createFactor = async (req, res) => {
     // }
 
     // const newFactor = await Factor.create({
-    // seller:req.userId,
+    // seller:req.user.id,
     // customer:req.body.customer,
     // factorDate:req.body.factorDate,
     // products:req.body.products,
@@ -294,7 +295,7 @@ exports.createFactor = async (req, res) => {
 // # route -> /api/sellers/products
 exports.getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find({ seller: req.userId }).populate(
+    const products = await Product.find({ seller: req.user.id }).populate(
       "seller"
     );
 
@@ -319,7 +320,7 @@ exports.getAllProducts = async (req, res) => {
 exports.getSingleProduct = async (req, res) => {
   try {
     const product = await Product.findOne({
-      seller: req.userId,
+      seller: req.user.id,
       _id: req.params.productId,
     }).populate("seller");
 
@@ -435,7 +436,7 @@ exports.updateProduct = async (req, res) => {
     await Product.findByIdAndUpdate(
       req.params.productId,
       {
-        seller: req.userId,
+        seller: req.user.id,
         title: req.body.title,
         productCode: req.body.productCode,
         productGroup: {
@@ -498,7 +499,7 @@ exports.updateProductImage = async (req, res) => {
     }
 
     const updatedProduct = await Product.findOneAndUpdate(
-      { _id: req.params.productId, seller: req.userId },
+      { _id: req.params.productId, seller: req.user.id },
       { image: req.files[0].path },
       { new: true }
     );
@@ -534,6 +535,246 @@ exports.deleteProduct = async (req, res) => {
 
     res.status(httpStatus.OK).json({
       msg: "محصول شما پاک شد",
+      status: "success",
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// *********************************************************************************
+// ************************************ Services ***********************************
+// *********************************************************************************
+// # description -> HTTP VERB -> Accesss
+// # get all services -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/services
+exports.getAllServices = async (req, res) => {
+  try {
+    const services = await Service.find({ seller: req.user.id }).populate(
+      "seller"
+    );
+
+    if (services && services.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام خدمات شما پیدا شدند",
+        status: "success",
+        count: services.length,
+        services,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هنوز خدمتی اضافه نشده است",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get single service -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/services/:serviceId
+exports.getSingleService = async (req, res) => {
+  try {
+    const service = await Service.findOne({
+      seller: req.user.id,
+      _id: req.params.serviceId,
+    }).populate("seller");
+
+    if (service) {
+      return res.status(httpStatus.OK).json({
+        msg: "خدمت شما پیدا شد",
+        status: "success",
+        service,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "خدمت پیدا نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create service -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/services
+exports.createService = async (req, res) => {
+  const {
+    serviceName,
+    countingRatio,
+    totalCost,
+    price,
+    moreInfo,
+    factorDescription,
+    vatPercent,
+  } = req.body;
+
+  try {
+    if (
+      !serviceName ||
+      !countingRatio ||
+      !totalCost ||
+      !price ||
+      !moreInfo ||
+      !factorDescription ||
+      !vatPercent
+    ) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد خدمت باید همه فیلدها را پر کنید.",
+        status: "failure",
+      });
+    }
+
+    const servicePath = req.file
+      ? req.file.path.replace("public", "")
+      : undefined;
+
+    let newService = await Service.create({
+      image: servicePath || "default.jpg",
+      seller: req.user.id,
+      serviceName: req.body.serviceName,
+      countingRatio: req.body.countingRatio,
+      totalCost: req.body.totalCost,
+      price: req.body.price,
+      moreInfo: req.body.moreInfo,
+      factorDescription: req.body.factorDescription,
+      vatPercent: req.body.vatPercent,
+    });
+
+    if (newService) {
+      return res.status(httpStatus.OK).json({
+        msg: "خدمت شما ایجاد شد",
+        status: "success",
+        service: newService,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "خدمت ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update service -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/services/:serviceId/update-service
+exports.updateService = async (req, res) => {
+  try {
+    let updatedService = await Service.findByIdAndUpdate(
+      req.params.serviceId,
+      {
+        serviceName: req.body.serviceName,
+        countingRatio: req.body.countingRatio,
+        totalCost: req.body.totalCost,
+        price: req.body.price,
+        moreInfo: req.body.moreInfo,
+        factorDescription: req.body.factorDescription,
+        vatPercent: req.body.vatPercent,
+      },
+      { new: true }
+    );
+
+    if (updatedService) {
+      return res.status(httpStatus.OK).json({
+        msg: "خدمت شما ویرایش شد",
+        status: "success",
+        service: updatedService,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "خدمت ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update service image -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/services/:serviceId/update-service-image
+exports.updateServiceImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "failure",
+        msg: "لطفاً یک تصویر ارسال کنید",
+      });
+    }
+
+    const updatedService = await Service.findOneAndUpdate(
+      { _id: req.params.serviceId, seller: req.user.id },
+      { image: req.file.path },
+      { new: true }
+    );
+
+    if (!updatedService) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "failure",
+        msg: "سرویسی با این شناسه یافت نشد",
+      });
+    }
+
+    if (updatedService) {
+      return;
+      res.status(httpStatus.OK).json({
+        status: "success",
+        msg: "تصویر سرویس با موفقیت ویرایش شد",
+        service: updatedService,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "خدمت ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطا در آپلود تصویر",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # delete service -> DELETE -> sellers (PRIVATE)
+// # route -> /api/sellers/services/:serviceId
+exports.deleteService = async (req, res) => {
+  try {
+    await Service.findByIdAndDelete(req.params.serviceId);
+
+    res.status(httpStatus.OK).json({
+      msg: "سرویس شما پاک شد",
       status: "success",
     });
   } catch (err) {

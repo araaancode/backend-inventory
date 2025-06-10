@@ -6,6 +6,13 @@ const validator = require("validator");
 
 const serviceSchema = new mongoose.Schema(
   {
+    seller: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+    },
+    image:{
+      type:String
+    },
     // نام خدمت
     serviceName: {
       type: String,
@@ -17,12 +24,12 @@ const serviceSchema = new mongoose.Schema(
     // هزینه تمام شده
     totalCost: {
       type: Number,
-      default:0
+      default: 0,
     },
     // قیمت
     price: {
       type: Number,
-      default:0
+      default: 0,
     },
     // اطلاعات بیشتر
     moreInfo: {
@@ -39,7 +46,7 @@ const serviceSchema = new mongoose.Schema(
     // درصد مالیات
     vatPercent: {
       type: Number,
-      default:1
+      default: 1,
     },
   },
   { timestamps: true }
