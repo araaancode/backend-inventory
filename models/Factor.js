@@ -3,6 +3,18 @@ const validator = require("validator");
 
 const factorSchema = new mongoose.Schema(
   {
+    seller: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: [true, "seller reference is required"],
+      validate: {
+        validator: async function (value) {
+          const user = await mongoose.model("User").findById(value);
+          return !!user;
+        },
+        message: "No user found with this ID",
+      },
+    },
     customer: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
@@ -74,7 +86,7 @@ const factorSchema = new mongoose.Schema(
       min: [0, "Tax cannot be negative"],
       max: [100, "Tax cannot exceed 100%"],
     },
-    type: {
+    factorType: {
       type: String,
       enum: [
         "invoice", // فاکتور اصلی
