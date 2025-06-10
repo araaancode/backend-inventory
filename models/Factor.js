@@ -70,6 +70,13 @@ const factorSchema = new mongoose.Schema(
       min: [0, 'Tax cannot be negative'],
       max: [100, 'Tax cannot exceed 100%']
     },
+    type:{
+      type:String,
+      enum:[
+        "invoice", // فاکتور اصلی
+        "proforma" // پیش فاکتور
+      ]
+    },
     totalPrice: {
       type: Number,
       required: [true, 'Total price is required'],
