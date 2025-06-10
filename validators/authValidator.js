@@ -2,7 +2,7 @@
 const { body } = require('express-validator');
 const User = require('../models/User');
 
-const registerValidations = [
+exports.registerValidations = [
   // Store Name validation
   body('storeName')
     .notEmpty().withMessage('نام فروشگاه الزامی است')
@@ -49,4 +49,14 @@ const registerValidations = [
     })
 ];
 
-module.exports = registerValidations;
+
+exports.loginValidations = [
+  // Identifier (username or phone)
+  body('identifier')
+    .notEmpty().withMessage('نام کاربری یا شماره موبایل الزامی است')
+    .trim(),
+
+  // Password validation
+  body('password')
+    .notEmpty().withMessage('رمز عبور الزامی است')
+];

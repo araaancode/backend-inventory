@@ -4,18 +4,25 @@ const router = express();
 
 const sellerAuthCtrls = require("../../controllers/sellers/auth");
 const upload = require("../../utils/multerConfig");
-const registerValidations = require("../../middlewares/registerValidator");
-const errorValidator = require("../../middlewares/errorValidator");
+const authValidator = require("../../validators/authValidator");
+const errorValidator = require("../../validators/errorValidator");
 
+// register seller
 router.post(
   "/register",
   upload.single("avatar"),
-  registerValidations,
+  authValidator.registerValidations,
   errorValidator,
   sellerAuthCtrls.register
 );
 
-// router.post("/login", sellerAuthCtrls.login);
+// login seller
+router.post(
+  "/login",
+  authValidator.loginValidations,
+  errorValidator,
+  sellerAuthCtrls.login
+);
 
 // router.post("/forgot-password", sellerAuthCtrls.forgotPassword);
 // router.post("/reset-password", sellerAuthCtrls.resetPassword);
