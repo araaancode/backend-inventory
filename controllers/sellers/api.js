@@ -1,6 +1,7 @@
 const Factor = require("../../models/Factor");
 const Product = require("../../models/Product");
 const Service = require("../../models/Service");
+const Cost = require("../../models/Cost");
 const httpStatus = require("http-status-codes");
 
 // *********************************************************************************
@@ -775,6 +776,231 @@ exports.deleteService = async (req, res) => {
 
     res.status(httpStatus.OK).json({
       msg: "سرویس شما پاک شد",
+      status: "success",
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// // *********************************************************************************
+// ************************************ Costs ***********************************
+// *********************************************************************************
+// # description -> HTTP VERB -> Accesss
+// # get all costs -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/costs
+exports.getAllCosts = async (req, res) => {
+  try {
+    const costs = await Cost.find({ seller: req.user.id }).populate("seller");
+
+    if (costs && costs.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام هزینه های شما پیدا شدند",
+        status: "success",
+        count: costs.length,
+        costs,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هنوز هزینه ای اضافه نشده است",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get single cost -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/costs/:costId
+exports.getSingleCost = async (req, res) => {
+  try {
+    const cost = await Cost.findOne({
+      seller: req.user.id,
+      _id: req.params.costId,
+    }).populate("seller");
+
+    if (cost) {
+      return res.status(httpStatus.OK).json({
+        msg: "هزینه شما پیدا شد",
+        status: "success",
+        cost,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هزینه پیدا نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create Cost -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/costs
+exports.createCost = async (req, res) => {
+  const { costTitle, countingRatio, price, moreInfo, factorDescription } =
+    req.body;
+
+  try {
+    if (
+      !costTitle ||
+      !countingRatio ||
+      !price ||
+      !moreInfo ||
+      !factorDescription
+    ) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد خدمت باید همه فیلدها را پر کنید.",
+        status: "failure",
+      });
+    }
+
+    const servicePath = req.file
+      ? req.file.path.replace("public", "")
+      : undefined;
+
+    let newService = await Cost.create({
+      image: servicePath || "default.jpg",
+      seller: req.user.id,
+      costTitle,
+      countingRatio,
+      price,
+      moreInfo,
+      factorDescription,
+    });
+
+    if (newService) {
+      return res.status(httpStatus.OK).json({
+        msg: "هزینه شما ایجاد شد",
+        status: "success",
+        service: newService,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "هزینه ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update cost -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/costs/:costId/update-cost
+exports.updateCost = async (req, res) => {
+  try {
+    let updatedCost = await Cost.findByIdAndUpdate(
+      req.params.costId,
+      {
+        costTitle:req.body.costTitle,
+        countingRatio:req.body.countingRatio,
+        price:req.body.price,
+        moreInfo:req.body.moreInfo,
+        factorDescription:req.body.factorDescription,
+      },
+      { new: true }
+    );
+
+    if (updatedCost) {
+      return res.status(httpStatus.OK).json({
+        msg: "هزینه شما ویرایش شد",
+        status: "success",
+        cost: updatedCost,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "هزینه ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update cost image -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/costs/:costId/update-cost-image
+exports.updateCostImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "failure",
+        msg: "لطفاً یک تصویر ارسال کنید",
+      });
+    }
+
+    const updatedCost = await Cost.findOneAndUpdate(
+      { _id: req.params.costId, seller: req.user.id },
+      { image: req.file.path },
+      { new: true }
+    );
+
+    if (!updatedCost) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "failure",
+        msg: "هزینه با این شناسه یافت نشد",
+      });
+    }
+
+    if (updatedCost) {
+      return;
+      res.status(httpStatus.OK).json({
+        status: "success",
+        msg: "تصویر هزینه با موفقیت ویرایش شد",
+        cost: updatedCost,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "خدمت ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطا در آپلود تصویر",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # delete cost -> DELETE -> sellers (PRIVATE)
+// # route -> /api/sellers/costs/:costId
+exports.deleteCost = async (req, res) => {
+  try {
+    await Cost.findByIdAndDelete(req.params.costId);
+
+    res.status(httpStatus.OK).json({
+      msg: "هزینه شما پاک شد",
       status: "success",
     });
   } catch (err) {
