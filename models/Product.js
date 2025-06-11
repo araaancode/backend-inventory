@@ -124,53 +124,61 @@ const SubGroup = mongoose.model("SubGroup", subGroupSchema);
 const ProductGroup = mongoose.model("ProductGroup", productGroupSchema);
 
 const secondaryUnitSchema = new mongoose.Schema({
+  // واحد شمارش واحد فرعی
   countingUnit: {
     type: String,
-    required: [true, "Counting unit is required"],
     trim: true,
     maxlength: [20, "Counting unit cannot exceed 20 characters"],
   },
+  // ضریب واحد فرعی
   subunitRatio: {
     type: Number,
-    required: [true, "Subunit ratio is required"],
     min: [0.01, "Subunit ratio must be greater than 0"],
   },
-  openingInventoryMainUnit: {
+  // موجودی اولیه کالا (واحد اصلی)
+  initialInventoryMainUnit: {
     type: Number,
     default: 0,
-    min: [0, "Opening inventory cannot be negative"],
+    min: [0, "initial Inventory Main Unit cannot be negative"],
   },
-  openingInventorySubUnit: {
+  // موجودی اولیه کالا (واحد فرعی)
+  initialInventorySubUnit: {
     type: Number,
     default: 0,
-    min: [0, "Opening inventory cannot be negative"],
+    min: [0, "initial Inventory SubUnit cannot be negative"],
   },
+  // قیمت خرید (واحد اصلی)
   purchasePriceMainUnit: {
     type: Number,
     default: 0,
     min: [0, "Purchase price cannot be negative"],
   },
+  // قیمت خرید (واحد فرعی)
   purchasePriceSubUnit: {
     type: Number,
     default: 0,
     min: [0, "Purchase price cannot be negative"],
   },
+  // قیمت فروش (واحد اصلی)
   sellingPriceMainUnit: {
     type: Number,
     default: 0,
     min: [0, "Selling price cannot be negative"],
   },
+  // قیمت فروش (واحد فرعی)
   sellingPriceSubUnit: {
     type: Number,
     default: 0,
     min: [0, "Selling price cannot be negative"],
   },
-  secondSellingMainUnit: {
+  // قیمت فروش دوم (واحد اصلی)
+  secondSellingPriceMainUnit: {
     type: Number,
     default: 0,
     min: [0, "Second selling price cannot be negative"],
   },
-  secondSellingSubUnit: {
+  // قیمت فروش دوم (واحد فرعی)
+  secondSellingPriceSubUnit: {
     type: Number,
     default: 0,
     min: [0, "Second selling price cannot be negative"],
@@ -178,16 +186,19 @@ const secondaryUnitSchema = new mongoose.Schema({
 });
 
 const moreInfoSchema = new mongoose.Schema({
+  // اطلاعات بیشتر
   additionalInformation: {
     type: String,
     trim: true,
     maxlength: [500, "Additional information cannot exceed 500 characters"],
   },
+  // شرح در فاکتور
   factorDescription: {
     type: String,
     trim: true,
     maxlength: [200, "Factor description cannot exceed 200 characters"],
   },
+  // بارکد
   barcode: {
     type: String,
     trim: true,
@@ -201,31 +212,38 @@ const moreInfoSchema = new mongoose.Schema({
       message: "Barcode must be 8-13 numeric characters",
     },
   },
+  // حداقل روز برای هشدار تاریخ انقضا
   minExpireWarningDays: {
     type: Number,
     min: [0, "Minimum expire warning days cannot be negative"],
   },
+  // حداقل موجودی کالا
   minStock: {
     type: Number,
     min: [0, "Minimum stock cannot be negative"],
   },
+  // درصد مالیات بر ارزش افزوده
   vatPercent: {
     type: Number,
     min: [0, "VAT percentage cannot be negative"],
     max: [100, "VAT percentage cannot exceed 100%"],
   },
+  // وزن
   weight: {
     type: Number,
     min: [0, "Weight cannot be negative"],
   },
+  // طول
   length: {
     type: Number,
     min: [0, "Length cannot be negative"],
   },
+  // عرض
   width: {
     type: Number,
     min: [0, "Width cannot be negative"],
   },
+  // ارتفاع
   height: {
     type: Number,
     min: [0, "Height cannot be negative"],
@@ -279,12 +297,45 @@ const productSchema = new mongoose.Schema(
       type: productGroupSchema,
       required: [true, "Product group is required"],
     },
+    // واحد شمارش
     countingUnit: {
       type: String,
       required: [true, "Counting unit is required"],
       trim: true,
       maxlength: [20, "Counting unit cannot exceed 20 characters"],
     },
+    // بررسی داشتن یا نداشتن واحد فرعی
+    hasSecondUnit: {
+      type: Boolean,
+      default: false,
+    },
+
+    // موجودی اولیه کالا (واخد)
+    initialInventory: {
+      type: Number,
+      default: 0,
+      min: [0, "initial Inventory Main Unit cannot be negative"],
+    },
+    // قیمت خرید
+    purchasePrice: {
+      type: Number,
+      default: 0,
+      min: [0, "Purchase price cannot be negative"],
+    },
+    // قیمت فروش
+    sellingPrice: {
+      type: Number,
+      default: 0,
+      min: [0, "Selling price cannot be negative"],
+    },
+    // قیمت فروش دوم
+    secondSellingPrice: {
+      type: Number,
+      default: 0,
+      min: [0, "Second selling price cannot be negative"],
+    },
+
+    // (در صورت وجود واحد فرعی) واحد فرعی
     secondaryUnit: secondaryUnitSchema,
     moreInfo: moreInfoSchema,
   },
