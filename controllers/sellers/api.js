@@ -1,5 +1,5 @@
 const Factor = require("../../models/Factor");
-const Product = require("../../models/Product");
+const {Product,MainGroup,SubGroup} = require("../../models/Product");
 const Service = require("../../models/Service");
 const Cost = require("../../models/Cost");
 const BankAccount = require("../../models/BankAccount");
@@ -293,6 +293,35 @@ exports.createFactor = async (req, res) => {
 // *********************************************************************************
 
 // # description -> HTTP VERB -> Accesss
+// # create main group -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/products/maingroups
+exports.createMainGroup = async (req, res) => {
+  try {
+    const mainGroup = await MainGroup.create({ name:req.body.name })
+
+    if (mainGroup) {
+      return res.status(httpStatus.CREATED).json({
+        msg: "گروه اصلی ایجاد شد",
+        status: "success",
+        mainGroup,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "گروه اصلی پیدا نشد. دوباره امتحان کنید",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+
+// # description -> HTTP VERB -> Accesss
 // # get all products -> GET -> sellers (PRIVATE)
 // # route -> /api/sellers/products
 exports.getAllProducts = async (req, res) => {
@@ -308,10 +337,10 @@ exports.getAllProducts = async (req, res) => {
         count: products.length,
         products,
       });
-    }else{
+    } else {
       return res.status(httpStatus.NOT_FOUND).json({
         msg: "محصولی پیدا نشد. دوباره امتحان کنید",
-        status: "success",
+        status: "failure",
       });
     }
   } catch (err) {
@@ -333,14 +362,13 @@ exports.getSingleProduct = async (req, res) => {
       _id: req.params.productId,
     }).populate("seller");
 
-
     if (product) {
       return res.status(httpStatus.OK).json({
         msg: " محصول شما پیدا شد",
         status: "success",
         product,
       });
-    }else{
+    } else {
       return res.status(httpStatus.NOT_FOUND).json({
         msg: "محصولی پیدا نشد. دوباره امتحان کنید",
         status: "success",

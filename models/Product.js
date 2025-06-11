@@ -6,15 +6,15 @@ const mainGroupSchema = new mongoose.Schema({
   // نام گروه اصلی
   name: {
     type: String,
-    required: [true, 'MainGroup name is required'],
+    required: [true, "MainGroup name is required"],
     trim: true,
-    maxlength: [50, 'MainGroup name cannot exceed 50 characters'],
-    unique: true
+    maxlength: [50, "MainGroup name cannot exceed 50 characters"],
+    unique: true,
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 // SubGroup Schema
@@ -22,65 +22,64 @@ const subGroupSchema = new mongoose.Schema({
   // نام گروه فرعی
   name: {
     type: String,
-    required: [true, 'Subgroup name is required'],
+    required: [true, "Subgroup name is required"],
     trim: true,
-    maxlength: [50, 'Subgroup name cannot exceed 50 characters'],
-    unique: true
+    maxlength: [50, "Subgroup name cannot exceed 50 characters"],
+    unique: true,
   },
   // نام گروه اصلی که این گروه فرعی به آن مرتبط است
   mainGroup: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'ProductGroup',
-    required: [true, 'Subgroup must belong to a main group'],
+    ref: "ProductGroup",
+    required: [true, "Subgroup must belong to a main group"],
     validate: {
-      validator: async function(value) {
-        const group = await mongoose.model('ProductGroup').findById(value);
+      validator: async function (value) {
+        const group = await mongoose.model("ProductGroup").findById(value);
         return group !== null;
       },
-      message: 'No product group found with this ID'
-    }
+      message: "No product group found with this ID",
+    },
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 // Main ProductGroup Schema
 const productGroupSchema = new mongoose.Schema({
   //  گروه اصلی
-  mainGroup:mainGroupSchema,
+  mainGroup: mainGroupSchema,
   //  گروه فرعی
-  subGroup:subGroupSchema,
+  subGroup: subGroupSchema,
   // هشتگ
   hashtag: {
     type: String,
     trim: true,
-    maxlength: [30, 'Hashtag cannot exceed 30 characters']
+    maxlength: [30, "Hashtag cannot exceed 30 characters"],
   },
 });
 
 // Virtual populate - Get all subgroups for a main group
-productGroupSchema.virtual('subGroups', {
-  ref: 'SubGroup',
-  localField: '_id',
-  foreignField: 'mainGroup',
-  justOne: false
+productGroupSchema.virtual("subGroups", {
+  ref: "SubGroup",
+  localField: "_id",
+  foreignField: "mainGroup",
+  justOne: false,
 });
 
 // Ensure virtuals are included when converting to JSON/Object
-productGroupSchema.set('toJSON', { virtuals: true });
-productGroupSchema.set('toObject', { virtuals: true });
+productGroupSchema.set("toJSON", { virtuals: true });
+productGroupSchema.set("toObject", { virtuals: true });
 
 // Indexes for better performance
 productGroupSchema.index({ name: 1 });
 subGroupSchema.index({ name: 1 });
 subGroupSchema.index({ mainGroup: 1 });
 
-const MainGroup = mongoose.model('MainGroup', mainGroupSchema);
-const SubGroup = mongoose.model('SubGroup', subGroupSchema);
-const ProductGroup = mongoose.model('ProductGroup', productGroupSchema);
-
+const MainGroup = mongoose.model("MainGroup", mainGroupSchema);
+const SubGroup = mongoose.model("SubGroup", subGroupSchema);
+const ProductGroup = mongoose.model("ProductGroup", productGroupSchema);
 
 const secondaryUnitSchema = new mongoose.Schema({
   countingUnit: {
@@ -194,8 +193,8 @@ const moreInfoSchema = new mongoose.Schema({
 const productSchema = new mongoose.Schema(
   {
     // تصویر کالا
-    image:{
-      type:String,
+    image: {
+      type: String,
     },
     // فروشنده
     seller: {
@@ -232,7 +231,6 @@ const productSchema = new mongoose.Schema(
           "Product code can only contain letters, numbers, hyphens, and underscores",
       },
       required: [true, "Product Code is required"],
-
     },
     // گروه کالایی
     productGroup: {
@@ -247,7 +245,6 @@ const productSchema = new mongoose.Schema(
     },
     secondaryUnit: secondaryUnitSchema,
     moreInfo: moreInfoSchema,
-   
   },
   {
     timestamps: true,
@@ -257,4 +254,10 @@ const productSchema = new mongoose.Schema(
 );
 
 // Fix the model name (it was incorrectly exporting as 'User')
-module.exports = mongoose.model("Product", productSchema);
+const Product = mongoose.model("Product", productSchema);
+
+module.exports = {
+  MainGroup,
+  SubGroup,
+  Product
+};

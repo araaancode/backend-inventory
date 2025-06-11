@@ -110,9 +110,4 @@ const bankAccountSchema = new mongoose.Schema(
   }
 );
 
-// Add index for frequently queried fields
-bankAccountSchema.index({ accountHolder: 1 });
-bankAccountSchema.index({ accountNumber: 1 });
-bankAccountSchema.index({ cardNumber: 1 });
-
 module.exports = mongoose.model("BankAccount", bankAccountSchema);
