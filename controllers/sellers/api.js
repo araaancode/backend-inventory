@@ -9,6 +9,8 @@ const Service = require("../../models/Service");
 const Cost = require("../../models/Cost");
 const BankAccount = require("../../models/BankAccount");
 const httpStatus = require("http-status-codes");
+const { ObjectId } = require('mongoose').Types;
+
 
 // *********************************************************************************
 // ************************************ Factors ************************************
@@ -363,7 +365,9 @@ exports.createMainGroup = async (req, res) => {
 // # route -> /api/sellers/products/subgroups
 exports.getAllSubGroups = async (req, res) => {
   try {
-    const subGroups = await SubGroup.find({ seller: req.user.id }).populate('mainGroup')
+    const subGroups = await SubGroup.find({ seller: req.user.id }).populate(
+      "mainGroup"
+    );
 
     if (subGroups) {
       return res.status(httpStatus.CREATED).json({
@@ -420,13 +424,14 @@ exports.createSubGroup = async (req, res) => {
   }
 };
 
-
 // # description -> HTTP VERB -> Accesss
 // # get all product groups -> GET -> sellers (PRIVATE)
 // # route -> /api/sellers/products/productgroups
 exports.getAllProductGroups = async (req, res) => {
   try {
-    const productGroups = await ProductGroup.find({ seller: req.user.id }).populate('mainGroup subGroup')
+    const productGroups = await ProductGroup.find({
+      seller: req.user.id,
+    }).populate("mainGroup subGroup");
 
     if (productGroups) {
       return res.status(httpStatus.OK).json({
@@ -550,83 +555,126 @@ exports.getSingleProduct = async (req, res) => {
 // # create product -> POST -> sellers (PRIVATE)
 // # route -> /api/sellers/products
 exports.createProduct = async (req, res) => {
-  // const {
-  //   title,
-  //   productCode,
-  //   countingUnit,
-  // } = req.body;
+  const { title, productCode, countingUnit, unitTypes } = req.body;
 
   try {
-    //   if (
-    //     !title ||
-    //     !productCode ||
-    //     !countingUnit
-    //   ) {
-    //     return res.status(httpStatus.BAD_REQUEST).json({
-    //       msg: "برای ایجاد محصول باید همه فیلدها را پر کنید.",
-    //       status: "failure",
-    //     });
-    //   }
+    if (!title || !productCode || !countingUnit || !unitTypes) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد محصول باید همه فیلدها را پر کنید.",
+        status: "failure",
+      });
+    }
 
     const productPath = req.file
       ? req.file.path.replace("public", "")
       : undefined;
 
-    // declare variables
-    var productGroupObj = {};
-    var secondaryUnitObj = {};
-    var moreInfoObj = {};
+    // create product if it has Main Unit
+    if (unitTypes === "mainUnit") {
+      let moreInfoObj = {
+        additionalInformation: req.body.additionalInformation,
+        factorDescription: req.body.factorDescription,
+        barcode: req.body.barcode,
+        minExpireWarningDays: req.body.minExpireWarningDays,
+        minStock: req.body.minStock,
+        vatPercent: req.body.vatPercent,
+        weight: req.body.weight,
+        length: req.body.length,
+        width: req.body.width,
+        height: req.body.height,
+      };
 
-    var subGroupObj = {};
+      console.log(new ObjectId(req.user.id));
+      
 
-    subGroupObj.whichMainGroup = req.body.whichMainGroup;
+      let newProduct = await Product.create({
+        seller: new ObjectId(req.user.id),
+        image: productPath || "default.jpg",
+        title: req.body.title,
+        productCode: req.body.productCode,
+        productGroup: new ObjectId(req.body.productGroup),
+        countingUnit: req.body.countingUnit,
+        unitTypes: req.body.unitTypes,
+        initialInventory: req.body.initialInventory,
+        purchasePrice: req.body.purchasePrice,
+        sellingPrice: req.body.sellingPrice,
+        secondSellingPrice: req.body.secondSellingPrice,
+        moreInfo:moreInfoObj
+      });
 
-    // assign the product group values
-    productGroupObj.mainGroup = req.body.mainGroup;
-    productGroupObj.subGroup = subGroupObj;
-    productGroupObj.hashtag = req.body.hashtag;
+      if (newProduct) {
+        return res.status(httpStatus.CREATED).json({
+          msg: " کالا ایجاد شد",
+          status: "success",
+          newProduct,
+        });
+      } else {
+        return res.status(httpStatus.NOT_FOUND).json({
+          msg: " کالا ایجاد نشد. دوباره امتحان کنید",
+          status: "failure",
+        });
+      }
+    }
 
-    // assign the secondary unit values
-    secondaryUnitObj.secondaryUnitCountingUnit =
-      req.body.secondaryUnitCountingUnit;
-    secondaryUnitObj.subunitRatio = req.body.subunitRatio;
-    secondaryUnitObj.openingInventoryMainUnit =
-      req.body.openingInventoryMainUnit;
-    secondaryUnitObj.openingInventorySubUnit = req.body.openingInventorySubUnit;
-    secondaryUnitObj.purchasePriceMainUnit = req.body.purchasePriceMainUnit;
-    secondaryUnitObj.purchasePriceSubUnit = req.body.purchasePriceSubUnit;
-    secondaryUnitObj.sellingPriceMainUnit = req.body.sellingPriceMainUnit;
-    secondaryUnitObj.sellingPriceSubUnit = req.body.sellingPriceSubUnit;
-    secondaryUnitObj.secondSellingMainUnit = req.body.secondSellingMainUnit;
-    secondaryUnitObj.secondSellingSubUnit = req.body.secondSellingSubUnit;
+    // create product if it has Secondary Unit
+    if (unitTypes === "secondaryUnit") {
+      let secondaryUnitObj = {
+        countingUnit: req.body.countingUnit,
+        subunitRatio: req.body.subunitRatio,
+        initialInventoryMainUnit: req.body.initialInventoryMainUnit,
+        initialInventorySubUnit: req.body.initialInventorySubUnit,
+        purchasePriceMainUnit: req.body.purchasePriceMainUnit,
+        purchasePriceSubUnit: req.body.purchasePriceSubUnit,
+        sellingPriceMainUnit: req.body.sellingPriceMainUnit,
+        sellingPriceSubUnit: req.body.sellingPriceSubUnit,
+        secondSellingPriceMainUnit: req.body.secondSellingPriceMainUnit,
+        secondSellingPriceSubUnit: req.body.secondSellingPriceSubUnit,
+      };
 
-    // assign the more info values
-    moreInfoObj.additionalInformation = req.body.additionalInformation;
-    moreInfoObj.factorDescription = req.body.factorDescription;
-    moreInfoObj.barcode = req.body.barcode;
-    moreInfoObj.minExpireWarningDays = req.body.minExpireWarningDays;
-    moreInfoObj.minStock = req.body.minStock;
-    moreInfoObj.vatPercent = req.body.vatPercent;
-    moreInfoObj.weight = req.body.weight;
-    moreInfoObj.length = req.body.length;
-    moreInfoObj.width = req.body.width;
-    moreInfoObj.height = req.body.height;
+      let moreInfoObj = {
+        additionalInformation: req.body.additionalInformation,
+        factorDescription: req.body.factorDescription,
+        barcode: req.body.barcode,
+        minExpireWarningDays: req.body.minExpireWarningDays,
+        minStock: req.body.minStock,
+        vatPercent: req.body.vatPercent,
+        minStock: req.body.minStock,
+        weight: req.body.weight,
+        length: req.body.length,
+        width: req.body.width,
+        height: req.body.height,
+      };
 
-    await Product.create({
-      image: productPath || "default.jpg",
-      seller: req.user.id,
-      title: req.body.title,
-      productCode: req.body.productCode,
-      productGroup: productGroupObj,
-      countingUnit: req.body.countingUnit,
-      secondaryUnit: secondaryUnitObj,
-      moreInfo: moreInfoObj,
-    });
+      let newProduct = await Product.create({
+        seller: req.user.id,
+        image: productPath || "default.jpg",
+        title: req.body.title,
+        productCode: req.body.productCode,
+        productGroup: req.body.productGroup,
+        countingUnit: req.body.countingUnit,
+        unitTypes: req.body.unitTypes,
+        secondaryUnit: secondaryUnitObj,
+        moreInfo: moreInfoObj,
+      });
 
-    res.status(httpStatus.OK).json({
-      msg: " محصول شما ایجاد شد",
-      status: "success",
-    });
+      if (newProduct) {
+        return res.status(httpStatus.CREATED).json({
+          msg: " کالا ایجاد شد",
+          status: "success",
+          newProduct,
+        });
+      } else {
+        return res.status(httpStatus.NOT_FOUND).json({
+          msg: " کالا ایجاد نشد. دوباره امتحان کنید",
+          status: "failure",
+        });
+      }
+    } else {
+      res.status(httpStatus.BAD_REQUEST).json({
+        msg: "نوع واحد نامعتبر است",
+      });
+    }
+
   } catch (err) {
     console.log(err);
     res.status(httpStatus.INTERNAL_SERVER_ERROR).json({

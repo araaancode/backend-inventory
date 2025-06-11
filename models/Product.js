@@ -6,14 +6,6 @@ const mainGroupSchema = new mongoose.Schema({
   seller: {
     type: mongoose.Schema.ObjectId,
     ref: "User",
-    required: [true, "seller reference is required"],
-    validate: {
-      validator: async function (value) {
-        const user = await mongoose.model("User").findById(value);
-        return !!user;
-      },
-      message: "No user found with this ID",
-    },
   },
   // نام گروه اصلی
   name: {
@@ -21,7 +13,9 @@ const mainGroupSchema = new mongoose.Schema({
     required: [true, "MainGroup name is required"],
     trim: true,
     maxlength: [50, "MainGroup name cannot exceed 50 characters"],
+    sparse: true,
   },
+
   createdAt: {
     type: Date,
     default: Date.now,
@@ -33,14 +27,6 @@ const subGroupSchema = new mongoose.Schema({
   seller: {
     type: mongoose.Schema.ObjectId,
     ref: "User",
-    required: [true, "seller reference is required"],
-    validate: {
-      validator: async function (value) {
-        const user = await mongoose.model("User").findById(value);
-        return !!user;
-      },
-      message: "No user found with this ID",
-    },
   },
   // نام گروه فرعی
   name: {
@@ -67,19 +53,10 @@ const productGroupSchema = new mongoose.Schema({
   seller: {
     type: mongoose.Schema.ObjectId,
     ref: "User",
-    required: [true, "seller reference is required"],
-    validate: {
-      validator: async function (value) {
-        const user = await mongoose.model("User").findById(value);
-        return !!user;
-      },
-      message: "No user found with this ID",
-    },
   },
   // نام گروه کالایی
   name: {
     type: String,
-    required: [true, "Product Group name is required"],
     trim: true,
     maxlength: [50, "Product Group name cannot exceed 50 characters"],
     unique: true,
@@ -101,23 +78,6 @@ const productGroupSchema = new mongoose.Schema({
     maxlength: [30, "Hashtag cannot exceed 30 characters"],
   },
 });
-
-// Virtual populate - Get all subgroups for a main group
-productGroupSchema.virtual("subGroups", {
-  ref: "SubGroup",
-  localField: "_id",
-  foreignField: "mainGroup",
-  justOne: false,
-});
-
-// Ensure virtuals are included when converting to JSON/Object
-productGroupSchema.set("toJSON", { virtuals: true });
-productGroupSchema.set("toObject", { virtuals: true });
-
-// Indexes for better performance
-productGroupSchema.index({ name: 1 });
-subGroupSchema.index({ name: 1 });
-subGroupSchema.index({ mainGroup: 1 });
 
 const MainGroup = mongoose.model("MainGroup", mainGroupSchema);
 const SubGroup = mongoose.model("SubGroup", subGroupSchema);
@@ -261,13 +221,6 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: "User",
       required: [true, "seller reference is required"],
-      validate: {
-        validator: async function (value) {
-          const user = await mongoose.model("User").findById(value);
-          return !!user;
-        },
-        message: "No user found with this ID",
-      },
     },
     // نام کالا
     title: {
@@ -305,9 +258,10 @@ const productSchema = new mongoose.Schema(
       maxlength: [20, "Counting unit cannot exceed 20 characters"],
     },
     // بررسی داشتن یا نداشتن واحد فرعی
-    hasSecondUnit: {
-      type: Boolean,
-      default: false,
+    unitTypes: {
+      type: String,
+      enum: ["mainUnit", "secondaryUnit"],
+      default: "mainUnit",
     },
 
     // موجودی اولیه کالا (واخد)
@@ -337,6 +291,8 @@ const productSchema = new mongoose.Schema(
 
     // (در صورت وجود واحد فرعی) واحد فرعی
     secondaryUnit: secondaryUnitSchema,
+
+    // اطلاعات بیشتر
     moreInfo: moreInfoSchema,
   },
   {
