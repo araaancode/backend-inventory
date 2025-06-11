@@ -650,7 +650,7 @@ exports.createProduct = async (req, res) => {
         image: productPath || "default.jpg",
         title: req.body.title,
         productCode: req.body.productCode,
-        productGroup: req.body.productGroup,
+        productGroup: new ObjectId(req.body.productGroup),
         countingUnit: req.body.countingUnit,
         unitTypes: req.body.unitTypes,
         secondaryUnit: secondaryUnitObj,
@@ -747,7 +747,7 @@ exports.updateProduct = async (req, res) => {
 // # route -> /api/sellers/products/:productId/update-product-image
 exports.updateProductImage = async (req, res) => {
   try {
-    if (!req.files || req.files.length === 0) {
+    if (!req.file) {
       return res.status(httpStatus.BAD_REQUEST).json({
         status: "failure",
         msg: "لطفاً یک تصویر ارسال کنید",
@@ -756,7 +756,7 @@ exports.updateProductImage = async (req, res) => {
 
     const updatedProduct = await Product.findOneAndUpdate(
       { _id: req.params.productId, seller: req.user.id },
-      { image: req.files[0].path },
+      { image: req.file.path },
       { new: true }
     );
 
