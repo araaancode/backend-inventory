@@ -1,5 +1,5 @@
 const Factor = require("../../models/Factor");
-const {Product,MainGroup,SubGroup} = require("../../models/Product");
+const { Product, MainGroup, SubGroup } = require("../../models/Product");
 const Service = require("../../models/Service");
 const Cost = require("../../models/Cost");
 const BankAccount = require("../../models/BankAccount");
@@ -297,7 +297,7 @@ exports.createFactor = async (req, res) => {
 // # route -> /api/sellers/products/maingroups
 exports.createMainGroup = async (req, res) => {
   try {
-    const mainGroup = await MainGroup.create({ name:req.body.name })
+    const mainGroup = await MainGroup.create({ name: req.body.name, createdAt:req.body.createdAt });
 
     if (mainGroup) {
       return res.status(httpStatus.CREATED).json({
@@ -320,6 +320,37 @@ exports.createMainGroup = async (req, res) => {
   }
 };
 
+// # description -> HTTP VERB -> Accesss
+// # create sub group -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/products/subgroups
+exports.createSubGroup = async (req, res) => {
+  try {
+    const subGroup = await SubGroup.create({
+      name: req.body.name,
+      mainGroup: req.body.mainGroup,
+      createdAt:req.body.createdAt
+    });
+
+    if (subGroup) {
+      return res.status(httpStatus.CREATED).json({
+        msg: "گروه فرعی ایجاد شد",
+        status: "success",
+        subGroup,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "گروه فرعی پیدا نشد. دوباره امتحان کنید",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
 
 // # description -> HTTP VERB -> Accesss
 // # get all products -> GET -> sellers (PRIVATE)

@@ -32,13 +32,6 @@ const subGroupSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "ProductGroup",
     required: [true, "Subgroup must belong to a main group"],
-    validate: {
-      validator: async function (value) {
-        const group = await mongoose.model("ProductGroup").findById(value);
-        return group !== null;
-      },
-      message: "No product group found with this ID",
-    },
   },
   createdAt: {
     type: Date,

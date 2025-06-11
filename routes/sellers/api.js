@@ -19,6 +19,14 @@ router.post(
   sellerApiCtrls.createMainGroup
 );
 
+router.post(
+  "/products/subgroups",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.createSubGroup
+);
+
+
 router.get(
   "/products",
   authenticateUser,
