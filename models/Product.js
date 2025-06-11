@@ -21,7 +21,6 @@ const mainGroupSchema = new mongoose.Schema({
     required: [true, "MainGroup name is required"],
     trim: true,
     maxlength: [50, "MainGroup name cannot exceed 50 characters"],
-    unique: true,
   },
   createdAt: {
     type: Date,
@@ -63,12 +62,38 @@ const subGroupSchema = new mongoose.Schema({
   },
 });
 
-// Main ProductGroup Schema
+// Main Product Group Schema
 const productGroupSchema = new mongoose.Schema({
+  seller: {
+    type: mongoose.Schema.ObjectId,
+    ref: "User",
+    required: [true, "seller reference is required"],
+    validate: {
+      validator: async function (value) {
+        const user = await mongoose.model("User").findById(value);
+        return !!user;
+      },
+      message: "No user found with this ID",
+    },
+  },
+  // نام گروه کالایی
+  name: {
+    type: String,
+    required: [true, "Product Group name is required"],
+    trim: true,
+    maxlength: [50, "Product Group name cannot exceed 50 characters"],
+    unique: true,
+  },
   //  گروه اصلی
-  mainGroup: mainGroupSchema,
+  mainGroup: {
+    type: mongoose.Schema.ObjectId,
+    ref: "MainGroup",
+  },
   //  گروه فرعی
-  subGroup: subGroupSchema,
+  subGroup: {
+    type: mongoose.Schema.ObjectId,
+    ref: "SubGroup",
+  },
   // هشتگ
   hashtag: {
     type: String,
@@ -276,5 +301,6 @@ const Product = mongoose.model("Product", productSchema);
 module.exports = {
   MainGroup,
   SubGroup,
-  Product
+  ProductGroup,
+  Product,
 };

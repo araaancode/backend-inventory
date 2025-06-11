@@ -1,5 +1,10 @@
 const Factor = require("../../models/Factor");
-const { Product, MainGroup, SubGroup } = require("../../models/Product");
+const {
+  Product,
+  MainGroup,
+  SubGroup,
+  ProductGroup,
+} = require("../../models/Product");
 const Service = require("../../models/Service");
 const Cost = require("../../models/Cost");
 const BankAccount = require("../../models/BankAccount");
@@ -358,7 +363,7 @@ exports.createMainGroup = async (req, res) => {
 // # route -> /api/sellers/products/subgroups
 exports.getAllSubGroups = async (req, res) => {
   try {
-    const subGroups = await SubGroup.find({ seller: req.user.id });
+    const subGroups = await SubGroup.find({ seller: req.user.id }).populate('mainGroup')
 
     if (subGroups) {
       return res.status(httpStatus.CREATED).json({
@@ -403,6 +408,70 @@ exports.createSubGroup = async (req, res) => {
     } else {
       return res.status(httpStatus.NOT_FOUND).json({
         msg: "گروه فرعی ایجاد نشد. دوباره امتحان کنید",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+
+// # description -> HTTP VERB -> Accesss
+// # get all product groups -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/products/productgroups
+exports.getAllProductGroups = async (req, res) => {
+  try {
+    const productGroups = await ProductGroup.find({ seller: req.user.id }).populate('mainGroup subGroup')
+
+    if (productGroups) {
+      return res.status(httpStatus.OK).json({
+        msg: "گروه های کالایی پیدا شدند",
+        status: "success",
+        count: productGroups.length,
+        productGroups,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "گروه کالایی پیدا نشد. دوباره امتحان کنید",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create product group -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/products/productgroups
+exports.createProductGroup = async (req, res) => {
+  try {
+    const productGroup = await ProductGroup.create({
+      seller: req.user.id,
+      name: req.body.name,
+      mainGroup: req.body.mainGroup,
+      subGroup: req.body.subGroup,
+      hashtag: req.body.hashtag,
+    });
+
+    if (productGroup) {
+      return res.status(httpStatus.CREATED).json({
+        msg: "گروه کالایی ایجاد شد",
+        status: "success",
+        productGroup,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "گروه کالایی ایجاد نشد. دوباره امتحان کنید",
         status: "failure",
       });
     }

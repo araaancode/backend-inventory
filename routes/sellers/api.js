@@ -49,6 +49,20 @@ router.get(
 );
 
 router.get(
+  "/products/productgroups",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllProductGroups
+);
+
+router.post(
+  "/products/productgroups",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.createProductGroup
+);
+
+router.get(
   "/products/:productId",
   authenticateUser,
   authorizeRoles("seller"),
