@@ -3,6 +3,18 @@ const validator = require("validator");
 
 // mainGroup Schema
 const mainGroupSchema = new mongoose.Schema({
+  seller: {
+    type: mongoose.Schema.ObjectId,
+    ref: "User",
+    required: [true, "seller reference is required"],
+    validate: {
+      validator: async function (value) {
+        const user = await mongoose.model("User").findById(value);
+        return !!user;
+      },
+      message: "No user found with this ID",
+    },
+  },
   // نام گروه اصلی
   name: {
     type: String,
@@ -19,6 +31,18 @@ const mainGroupSchema = new mongoose.Schema({
 
 // SubGroup Schema
 const subGroupSchema = new mongoose.Schema({
+  seller: {
+    type: mongoose.Schema.ObjectId,
+    ref: "User",
+    required: [true, "seller reference is required"],
+    validate: {
+      validator: async function (value) {
+        const user = await mongoose.model("User").findById(value);
+        return !!user;
+      },
+      message: "No user found with this ID",
+    },
+  },
   // نام گروه فرعی
   name: {
     type: String,

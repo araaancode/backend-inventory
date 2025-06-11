@@ -293,11 +293,44 @@ exports.createFactor = async (req, res) => {
 // *********************************************************************************
 
 // # description -> HTTP VERB -> Accesss
+// # get all main groups -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/products/maingroups
+exports.getAllMainGroups = async (req, res) => {
+  try {
+    const mainGroups = await MainGroup.find({ seller: req.user.id });
+
+    if (mainGroups) {
+      return res.status(httpStatus.OK).json({
+        msg: "گروه اصلی های اصلی پیدا شدند",
+        status: "success",
+        count: mainGroups.length,
+        mainGroups,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "گروه اصلی پیدا نشد. دوباره امتحان کنید",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
 // # create main group -> POST -> sellers (PRIVATE)
 // # route -> /api/sellers/products/maingroups
 exports.createMainGroup = async (req, res) => {
   try {
-    const mainGroup = await MainGroup.create({ name: req.body.name, createdAt:req.body.createdAt });
+    const mainGroup = await MainGroup.create({
+      seller: req.user.id,
+      name: req.body.name,
+      createdAt: req.body.createdAt,
+    });
 
     if (mainGroup) {
       return res.status(httpStatus.CREATED).json({
@@ -307,7 +340,36 @@ exports.createMainGroup = async (req, res) => {
       });
     } else {
       return res.status(httpStatus.NOT_FOUND).json({
-        msg: "گروه اصلی پیدا نشد. دوباره امتحان کنید",
+        msg: "گروه اصلی ایجاد نشد. دوباره امتحان کنید",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get all sub groups -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/products/subgroups
+exports.getAllSubGroups = async (req, res) => {
+  try {
+    const subGroups = await SubGroup.find({ seller: req.user.id });
+
+    if (subGroups) {
+      return res.status(httpStatus.CREATED).json({
+        msg: "گروه های فرعی پیدا شدند",
+        status: "success",
+        count: subGroups.length,
+        subGroups,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "گروه فرعی پیدا نشد. دوباره امتحان کنید",
         status: "failure",
       });
     }
@@ -326,9 +388,10 @@ exports.createMainGroup = async (req, res) => {
 exports.createSubGroup = async (req, res) => {
   try {
     const subGroup = await SubGroup.create({
+      seller: req.user.id,
       name: req.body.name,
       mainGroup: req.body.mainGroup,
-      createdAt:req.body.createdAt
+      createdAt: req.body.createdAt,
     });
 
     if (subGroup) {
@@ -339,7 +402,7 @@ exports.createSubGroup = async (req, res) => {
       });
     } else {
       return res.status(httpStatus.NOT_FOUND).json({
-        msg: "گروه فرعی پیدا نشد. دوباره امتحان کنید",
+        msg: "گروه فرعی ایجاد نشد. دوباره امتحان کنید",
         status: "failure",
       });
     }

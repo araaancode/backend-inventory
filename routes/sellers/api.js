@@ -12,11 +12,25 @@ const upload = require("../../utils/multerConfig");
 // ******************************* Products *******************************
 // ************************************************************************
 
+router.get(
+  "/products/maingroups",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllMainGroups
+);
+
 router.post(
   "/products/maingroups",
   authenticateUser,
   authorizeRoles("seller"),
   sellerApiCtrls.createMainGroup
+);
+
+router.get(
+  "/products/subgroups",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllSubGroups
 );
 
 router.post(
