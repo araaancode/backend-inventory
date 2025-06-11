@@ -871,12 +871,10 @@ exports.createCost = async (req, res) => {
       });
     }
 
-    const servicePath = req.file
-      ? req.file.path.replace("public", "")
-      : undefined;
+    const costPath = req.file ? req.file.path.replace("public", "") : undefined;
 
     let newService = await Cost.create({
-      image: servicePath || "default.jpg",
+      image: costPath || "default.jpg",
       seller: req.user.id,
       costTitle,
       countingRatio,
@@ -914,11 +912,11 @@ exports.updateCost = async (req, res) => {
     let updatedCost = await Cost.findByIdAndUpdate(
       req.params.costId,
       {
-        costTitle:req.body.costTitle,
-        countingRatio:req.body.countingRatio,
-        price:req.body.price,
-        moreInfo:req.body.moreInfo,
-        factorDescription:req.body.factorDescription,
+        costTitle: req.body.costTitle,
+        countingRatio: req.body.countingRatio,
+        price: req.body.price,
+        moreInfo: req.body.moreInfo,
+        factorDescription: req.body.factorDescription,
       },
       { new: true }
     );
@@ -997,12 +995,22 @@ exports.updateCostImage = async (req, res) => {
 // # route -> /api/sellers/costs/:costId
 exports.deleteCost = async (req, res) => {
   try {
-    await Cost.findByIdAndDelete(req.params.costId);
+    let findCost = await Cost.findOne({ _id: req.params.costId });
 
-    res.status(httpStatus.OK).json({
-      msg: "هزینه شما پاک شد",
-      status: "success",
-    });
+    if (findCost) {
+      await Cost.findByIdAndDelete(req.params.costId);
+
+      return res.status(httpStatus.OK).json({
+        msg: "هزینه شما پاک شد",
+        status: "success",
+      });
+    }else{
+
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "درخواست شما نامعتبر است",
+        status: "failure",
+      });
+    }
   } catch (err) {
     console.log(err);
     res.status(httpStatus.INTERNAL_SERVER_ERROR).json({

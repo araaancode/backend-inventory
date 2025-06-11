@@ -119,7 +119,7 @@ router.get(
 );
 
 router.get(
-  "/costs/:serviceId",
+  "/costs/:costId",
   authenticateUser,
   authorizeRoles("seller"),
   sellerApiCtrls.getSingleCost
@@ -134,14 +134,14 @@ router.post(
 );
 
 router.put(
-  "/costs/:serviceId/update-service",
+  "/costs/:costId/update-cost",
   authenticateUser,
   authorizeRoles("seller"),
   sellerApiCtrls.updateCost
 );
 
 router.put(
-  "/costs/:serviceId/update-service-image",
+  "/costs/:costId/update-cost-image",
   authenticateUser,
   authorizeRoles("seller"),
   upload.single("image"),
@@ -149,7 +149,7 @@ router.put(
 );
 
 router.delete(
-  "/costs/:serviceId",
+  "/costs/:costId",
   authenticateUser,
   authorizeRoles("seller"),
   sellerApiCtrls.deleteCost

@@ -37,13 +37,6 @@ const costSchema = new mongoose.Schema(
     countingRatio: {
       type: String,
       trim: true,
-      validate: {
-        validator: function (v) {
-          if (!v) return true;
-          return /^[0-9\/]+$/.test(v);
-        },
-        message: "نسبت شمارش باید عدد یا کسر باشد (مثال: 1 یا 1/2)",
-      },
     },
     //  قیمت
     price: {
