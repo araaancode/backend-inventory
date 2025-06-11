@@ -2,6 +2,7 @@ const Factor = require("../../models/Factor");
 const Product = require("../../models/Product");
 const Service = require("../../models/Service");
 const Cost = require("../../models/Cost");
+const BankAccount = require("../../models/BankAccount");
 const httpStatus = require("http-status-codes");
 
 // *********************************************************************************
@@ -866,7 +867,7 @@ exports.createCost = async (req, res) => {
       !factorDescription
     ) {
       return res.status(httpStatus.BAD_REQUEST).json({
-        msg: "برای ایجاد خدمت باید همه فیلدها را پر کنید.",
+        msg: "برای ایجاد هزینه باید همه فیلدها را پر کنید.",
         status: "failure",
       });
     }
@@ -1004,8 +1005,266 @@ exports.deleteCost = async (req, res) => {
         msg: "هزینه شما پاک شد",
         status: "success",
       });
-    }else{
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "درخواست شما نامعتبر است",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
 
+// // *********************************************************************************
+// ************************************ Bank Account ***********************************
+// *********************************************************************************
+// # description -> HTTP VERB -> Accesss
+// # get all bankaccounts -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/bankaccounts
+exports.getAllBankAccounts = async (req, res) => {
+  try {
+    const bankAccounts = await BankAccount.find({
+      seller: req.user.id,
+    }).populate("seller");
+
+    if (bankAccounts && bankAccounts.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام حساب های بانکی شما پیدا شدند",
+        status: "success",
+        count: bankAccounts.length,
+        bankAccounts,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هنوز حساب بانکی اضافه نشده است",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get single bank account -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/bankaccounts/:bankaccountId
+exports.getSingleBankAccount = async (req, res) => {
+  try {
+    const bankAccount = await bankAccount
+      .findOne({
+        seller: req.user.id,
+        _id: req.params.bankaccountId,
+      })
+      .populate("seller");
+
+    if (bankAccount) {
+      return res.status(httpStatus.OK).json({
+        msg: "حساب بانکی شما پیدا شد",
+        status: "success",
+        bankAccount,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "حساب بانکی پیدا نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create Bank Account -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/bankaccounts
+exports.createBankAccount = async (req, res) => {
+  const {
+    holderFullName,
+    accountNumber,
+    cardNumber,
+    moreInfo,
+    iban,
+    bankBranch,
+    balance,
+    additionalInfo,
+    bankName,
+  } = req.body;
+
+  try {
+    if (
+      !holderFullName ||
+      !accountNumber ||
+      !cardNumber ||
+      !moreInfo ||
+      !iban ||
+      !bankBranch ||
+      !balance ||
+      !additionalInfo ||
+      !bankName
+    ) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد حساب بانکی باید همه فیلدها را پر کنید.",
+        status: "failure",
+      });
+    }
+
+    const bankAccountPath = req.file
+      ? req.file.path.replace("public", "")
+      : undefined;
+
+    let newService = await BankAccount.create({
+      image: bankAccountPath || "default.jpg",
+      seller: req.user.id,
+      holderFullName,
+      accountNumber,
+      cardNumber,
+      moreInfo,
+      iban,
+      bankBranch,
+      balance,
+      additionalInfo,
+      bankName,
+    });
+
+    if (newService) {
+      return res.status(httpStatus.OK).json({
+        msg: "حساب بانکی شما ایجاد شد",
+        status: "success",
+        service: newService,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "حساب بانکی ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update bank account -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/bankaccounts/:bankaccountId/update-bankaccount
+exports.updateBankAccount = async (req, res) => {
+  try {
+    let updatedBankAccount = await BankAccount.findByIdAndUpdate(
+      req.params.bankaccountId,
+      {
+        holderFullName,
+        accountNumber,
+        cardNumber,
+        moreInfo,
+        iban,
+        bankBranch,
+        balance,
+        additionalInfo,
+        bankName,
+      },
+      { new: true }
+    );
+
+    if (updatedBankAccount) {
+      return res.status(httpStatus.OK).json({
+        msg: "حساب بانکی شما ویرایش شد",
+        status: "success",
+        bankAccount: updatedBankAccount,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "حساب بانکی ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update bank account image -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/bankaccounts/:bankaccountId/update-bankaccount-image
+exports.updateBankAccountImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "failure",
+        msg: "لطفاً یک تصویر ارسال کنید", 
+      });
+    }
+
+    const updatedBankAccount = await BankAccount.findOneAndUpdate(
+      { _id: req.params.bankaccountId, seller: req.user.id },
+      { image: req.file.path },
+      { new: true }
+    );
+
+    if (!updatedBankAccount) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "failure",
+        msg: "هزینه با این شناسه یافت نشد",
+      });
+    }
+
+    if (updatedBankAccount) {
+      return;
+      res.status(httpStatus.OK).json({
+        status: "success",
+        msg: "تصویر هزینه با موفقیت ویرایش شد",
+        bankAccount: updatedBankAccount,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "خدمت ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطا در آپلود تصویر",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # delete bank account -> DELETE -> sellers (PRIVATE)
+// # route -> /api/sellers/bankaccounts/:bankaccountId
+exports.deletebankAccount = async (req, res) => {
+  try {
+    let findBankAccount = await BankAccount.findOne({ _id: req.params.bankaccountId });
+
+    if (findBankAccount) {
+      await BankAccount.findByIdAndDelete(req.params.costId);
+
+      return res.status(httpStatus.OK).json({
+        msg: "هزینه شما پاک شد",
+        status: "success",
+      });
+    } else {
       return res.status(httpStatus.BAD_REQUEST).json({
         msg: "درخواست شما نامعتبر است",
         status: "failure",
