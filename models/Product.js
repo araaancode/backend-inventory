@@ -1,44 +1,85 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 
-const subGroupSchema = new mongoose.Schema({
-  whichMainGroup: {
-    type: mongoose.Schema.ObjectId,
-    ref: "ProductGroup",
-    required: [true, "Subgroup must belong to a main group"],
-    validate: {
-      validator: async function (value) {
-        const group = await mongoose.model("ProductGroup").findById(value);
-        return group !== null;
-      },
-      message: "No product group found with this ID",
-    },
+// mainGroup Schema
+const mainGroupSchema = new mongoose.Schema({
+  // نام گروه اصلی
+  name: {
+    type: String,
+    required: [true, 'MainGroup name is required'],
+    trim: true,
+    maxlength: [50, 'MainGroup name cannot exceed 50 characters'],
+    unique: true
   },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
-const productGroupSchema = new mongoose.Schema({
-  mainGroup: {
+// SubGroup Schema
+const subGroupSchema = new mongoose.Schema({
+  // نام گروه فرعی
+  name: {
     type: String,
-    required: [true, "Main group is required"],
+    required: [true, 'Subgroup name is required'],
     trim: true,
-    maxlength: [50, "Main group name cannot exceed 50 characters"],
+    maxlength: [50, 'Subgroup name cannot exceed 50 characters'],
+    unique: true
   },
-  subGroup: {
-    type: subGroupSchema,
+  // نام گروه اصلی که این گروه فرعی به آن مرتبط است
+  mainGroup: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProductGroup',
+    required: [true, 'Subgroup must belong to a main group'],
     validate: {
-      validator: function (value) {
-        return value.whichMainGroup !== undefined;
+      validator: async function(value) {
+        const group = await mongoose.model('ProductGroup').findById(value);
+        return group !== null;
       },
-      message: "Subgroup must reference a valid main group",
-    },
+      message: 'No product group found with this ID'
+    }
   },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// Main ProductGroup Schema
+const productGroupSchema = new mongoose.Schema({
+  //  گروه اصلی
+  mainGroup:mainGroupSchema,
+  //  گروه فرعی
+  subGroup:subGroupSchema,
+  // هشتگ
   hashtag: {
     type: String,
     trim: true,
-    maxlength: [30, "Hashtag cannot exceed 30 characters"],
+    maxlength: [30, 'Hashtag cannot exceed 30 characters']
   },
 });
 
+// Virtual populate - Get all subgroups for a main group
+productGroupSchema.virtual('subGroups', {
+  ref: 'SubGroup',
+  localField: '_id',
+  foreignField: 'mainGroup',
+  justOne: false
+});
+
+// Ensure virtuals are included when converting to JSON/Object
+productGroupSchema.set('toJSON', { virtuals: true });
+productGroupSchema.set('toObject', { virtuals: true });
+
+// Indexes for better performance
+productGroupSchema.index({ name: 1 });
+subGroupSchema.index({ name: 1 });
+subGroupSchema.index({ mainGroup: 1 });
+
+const MainGroup = mongoose.model('MainGroup', mainGroupSchema);
+const SubGroup = mongoose.model('SubGroup', subGroupSchema);
+const ProductGroup = mongoose.model('ProductGroup', productGroupSchema);
 
 
 const secondaryUnitSchema = new mongoose.Schema({
@@ -152,6 +193,11 @@ const moreInfoSchema = new mongoose.Schema({
 
 const productSchema = new mongoose.Schema(
   {
+    // تصویر کالا
+    image:{
+      type:String,
+    },
+    // فروشنده
     seller: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
@@ -164,6 +210,7 @@ const productSchema = new mongoose.Schema(
         message: "No user found with this ID",
       },
     },
+    // نام کالا
     title: {
       type: String,
       required: [true, "Product title is required"],
@@ -171,6 +218,7 @@ const productSchema = new mongoose.Schema(
       minlength: [3, "Product title must be at least 3 characters"],
       maxlength: [50, "Product title cannot exceed 50 characters"],
     },
+    // کد کالا
     productCode: {
       type: String,
       unique: true,
@@ -186,6 +234,7 @@ const productSchema = new mongoose.Schema(
       required: [true, "Product Code is required"],
 
     },
+    // گروه کالایی
     productGroup: {
       type: productGroupSchema,
       required: [true, "Product group is required"],
@@ -198,9 +247,7 @@ const productSchema = new mongoose.Schema(
     },
     secondaryUnit: secondaryUnitSchema,
     moreInfo: moreInfoSchema,
-    image:{
-      type:String,
-    }
+   
   },
   {
     timestamps: true,

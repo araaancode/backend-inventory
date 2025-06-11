@@ -301,12 +301,19 @@ exports.getAllProducts = async (req, res) => {
       "seller"
     );
 
-    res.status(httpStatus.OK).json({
-      msg: "تمام محصولات شما پیدا شدند",
-      status: "success",
-      count: products.length,
-      products,
-    });
+    if (products && products.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام محصولات شما پیدا شدند",
+        status: "success",
+        count: products.length,
+        products,
+      });
+    }else{
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "محصولی پیدا نشد. دوباره امتحان کنید",
+        status: "success",
+      });
+    }
   } catch (err) {
     console.log(err);
     res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
@@ -326,11 +333,19 @@ exports.getSingleProduct = async (req, res) => {
       _id: req.params.productId,
     }).populate("seller");
 
-    res.status(httpStatus.OK).json({
-      msg: " محصول شما پیدا شد",
-      status: "success",
-      product,
-    });
+
+    if (product) {
+      return res.status(httpStatus.OK).json({
+        msg: " محصول شما پیدا شد",
+        status: "success",
+        product,
+      });
+    }else{
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "محصولی پیدا نشد. دوباره امتحان کنید",
+        status: "success",
+      });
+    }
   } catch (err) {
     console.log(err);
     res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
