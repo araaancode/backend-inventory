@@ -85,7 +85,7 @@ const bankAccountSchema = new mongoose.Schema(
     },
 
     // اطلاعات بیشتر
-    additionalInfo: {
+    moreInfo: {
       type: String,
       trim: true,
     },

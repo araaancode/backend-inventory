@@ -156,4 +156,63 @@ router.delete(
 );
 
 
+
+// ************************************************************************
+// ******************************* Bank Accounts *******************************
+// ************************************************************************
+
+router.get(
+  "/bankaccounts",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllBankAccounts
+);
+
+router.get(
+  "/bankaccounts/:bankaccountId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getSingleBankAccount
+);
+
+router.post(
+  "/bankaccounts",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.createBankAccount
+);
+
+router.put(
+  "/bankaccounts/:bankaccountId/update-bankaccount",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.updateBankAccount
+);
+
+router.put(
+  "/bankaccounts/:bankaccountId/update-bankaccount-image",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.updateBankAccountImage
+);
+
+router.put(
+  "/bankaccounts/:bankaccountId/set-default",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.setDefaultBankAccount
+);
+
+router.delete(
+  "/bankaccounts/:bankaccountId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.deleteBankAccount
+);
+
+
+
 module.exports = router;
