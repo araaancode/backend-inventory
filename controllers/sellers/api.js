@@ -9,6 +9,7 @@ const Person = require("../../models/Person");
 const Service = require("../../models/Service");
 const Cost = require("../../models/Cost");
 const BankAccount = require("../../models/BankAccount");
+const FinancialFund = require("../../models/FinancialFund");
 const httpStatus = require("http-status-codes");
 const BankCheck = require("../../models/BankCheck");
 const { ObjectId } = require("mongoose").Types;
@@ -1827,7 +1828,7 @@ exports.createPerson = async (req, res) => {
       return res.status(httpStatus.OK).json({
         msg: "شخص شما ایجاد شد",
         status: "success",
-        service: newPerson,
+        person: newPerson,
       });
     } else {
       return res.status(httpStatus.BAD_REQUEST).json({
@@ -2058,7 +2059,7 @@ exports.deletePerson = async (req, res) => {
 };
 
 // // ******************************************************************************
-// ************************************ Bank Checks *******************************
+// ************************************ Bank Checks ********************************
 // *********************************************************************************
 
 // # description -> HTTP VERB -> Accesss
@@ -2187,7 +2188,7 @@ exports.createCheck = async (req, res) => {
       return res.status(httpStatus.OK).json({
         msg: "چک شما ایجاد شد",
         status: "success",
-        service: newBankCheck,
+        check: newBankCheck,
       });
     } else {
       return res.status(httpStatus.BAD_REQUEST).json({
@@ -2259,7 +2260,7 @@ exports.updateCheck = async (req, res) => {
       person: updatedBankCheck,
     });
   } catch (err) {
-    console.error("Update person error:", err);
+    console.error(err);
 
     // Handle specific mongoose errors
     if (err.name === "CastError") {
@@ -2367,6 +2368,292 @@ exports.deleteCheck = async (req, res) => {
 
       return res.status(httpStatus.OK).json({
         msg: "چک شماپاک شد",
+        status: "success",
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "درخواست شما نامعتبر است",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+
+// // ******************************************************************************
+// ************************************ Financial Fund ********************************
+// *********************************************************************************
+
+// # description -> HTTP VERB -> Accesss
+// # get all financial funds -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/funds
+exports.getAllFinancialFunds = async (req, res) => {
+  try {
+    const funds = await FinancialFund.find({
+      seller: req.user.id,
+    }).populate("seller");
+
+    if (funds && funds.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام صندوق های شما پیدا شدند",
+        status: "success",
+        count: funds.length,
+        funds,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هنوز صندوقی اضافه نشده است",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get single financial fund -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/funds/:fundId
+exports.getSingleFinancialFund = async (req, res) => {
+  try {
+    const fund = await FinancialFund.findOne({
+      seller: req.user.id,
+      _id: req.params.fundId,
+    }).populate("seller");
+
+    if (fund) {
+      return res.status(httpStatus.OK).json({
+        msg: "صندوق بانکی شماپیدا شد",
+        status: "success",
+        fund,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "صندوق پیدا نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create financial fund -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/funds
+exports.createFinancialFund = async (req, res) => {
+  const {
+    fundName,
+    initialStock,
+    moreInfo,
+  } = req.body;
+
+  try {
+    if (
+      !fundName ||
+      !initialStock ||
+      !moreInfo 
+    ) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد صندوق باید همه فیلدها را پر کنید.",
+        status: "failure",
+      });
+    }
+
+    const fundPath = req.file
+      ? req.file.path.replace("public", "")
+      : undefined;
+
+    let newFinancialFund = await FinancialFund.create({
+      image: fundPath || "default.jpg",
+      seller: req.user.id,
+      fundName,
+      initialStock,
+      moreInfo,
+    });
+
+    if (newFinancialFund) {
+      return res.status(httpStatus.OK).json({
+        msg: "صندوق شماایجاد شد",
+        status: "success",
+        fund: newFinancialFund,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "صندوق ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update financial fund -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/funds/:fundId
+exports.updateFinancialFund = async (req, res) => {
+  try {
+    const {
+      fundName,
+      initialStock,
+      moreInfo,
+    } = req.body;
+
+    const updateData = {
+      fundName,
+      initialStock,
+      moreInfo,
+    };
+
+    const updatedFinancialFund = await FinancialFund.findByIdAndUpdate(
+      req.params.fundId,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedFinancialFund) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "صندوق مورد نظر یافت نشد",
+      });
+    }
+
+    return res.status(httpStatus.OK).json({
+      msg: "اطلاعات صندوق با موفقیت ویرایش شد",
+      status: "success",
+      fund: updatedFinancialFund,
+    });
+  } catch (err) {
+    console.error(err);
+
+    // Handle specific mongoose errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه صندوق نامعتبر است",
+      });
+    }
+
+    if (err.name === "ValidationError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "داده‌های ارسالی نامعتبر هستند",
+        errors: err.errors,
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. لطفاً دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update financial fund image -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/funds/:fundId/update-fund-image
+exports.updateFundImage = async (req, res) => {
+  try {
+    // 1. Validate image exists
+    if (!req.file) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "لطفاً یک تصویر معتبر ارسال کنید",
+      });
+    }
+
+    // 2. Validate file type (optional but recommended)
+    const validMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validMimeTypes.includes(req.file.mimetype)) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "فرمت تصویر نامعتبر است. فقط تصاویر JPEG, PNG و WebP قابل قبول هستند",
+      });
+    }
+
+    // 3. Update Bank fund image (only if they belong to the requesting seller)
+    const updatedFinancialFund = await FinancialFund.findOneAndUpdate(
+      {
+        _id: req.params.fundId,
+        seller: req.user.id, 
+      },
+      {
+        image: req.file.path,
+        imageMimeType: req.file.mimetype, // Store mime type for future reference
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedFinancialFund) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "صندوق مورد نظر یافت نشد یا شما مجوز ویرایش آن را ندارید",
+      });
+    }
+
+    // 5. Return success response
+    return res.status(httpStatus.OK).json({
+      status: "success",
+      msg: "تصویر پروفایل با موفقیت به‌روزرسانی شد",
+      image: updatedFinancialFund.image,
+    });
+  } catch (err) {
+    console.error("Update fund image error:", err);
+
+    // Handle specific errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه صندوق نامعتبر است",
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطا در سرور هنگام آپلود تصویر",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # delete financial fund -> DELETE -> sellers (PRIVATE)
+// # route -> /api/sellers/funds/:fundId
+exports.deleteFund = async (req, res) => {
+  try {
+    let findFinancialFund = await FinancialFund.findOne({
+      _id: req.params.fundId,
+    });
+
+    if (findFinancialFund) {
+      await FinancialFund.findByIdAndDelete(req.params.fundId);
+
+      return res.status(httpStatus.OK).json({
+        msg: "صندوق شماپاک شد",
         status: "success",
       });
     } else {

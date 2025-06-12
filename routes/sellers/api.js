@@ -347,4 +347,55 @@ router.delete(
   sellerApiCtrls.deleteCheck
 );
 
+
+// ************************************************************************
+// ******************************* Funds *******************************
+// ************************************************************************
+
+router.get(
+  "/funds",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllFinancialFunds
+);
+
+router.get(
+  "/funds/:fundId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getSingleFinancialFund
+);
+
+router.post(
+  "/funds",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.createFinancialFund
+);
+
+router.put(
+  "/funds/:fundId/update-fund",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.updateFinancialFund
+);
+
+router.put(
+  "/funds/:fundId/update-fund-image",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.updateFundImage
+);
+
+router.delete(
+  "/funds/:fundId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.deleteFund
+);
+
+
+
 module.exports = router;
