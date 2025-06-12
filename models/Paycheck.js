@@ -3,6 +3,26 @@ const validator = require("validator");
 
 const paycheckSchema = new mongoose.Schema(
   {
+    // ایجاد کننده
+    seller: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: [true, "ایجاد کننده الزامی است"],
+      validate: {
+        validator: async function (value) {
+          // First check if the ID is valid to avoid unnecessary DB queries
+          if (!mongoose.Types.ObjectId.isValid(value)) return false;
+          // Only fetch the _id field for efficiency
+          const user = await mongoose
+            .model("User")
+            .findById(value)
+            .select("_id");
+          return !!user;
+        },
+        message: "ایجاد کننده معتبر نیست",
+      },
+      index: true,
+    },
     // پرداخت کننده
     payer: {
       type: mongoose.Schema.ObjectId,
@@ -28,12 +48,13 @@ const paycheckSchema = new mongoose.Schema(
         },
         message: "دریافت کننده معتبر نیست",
       },
+      sparse:true
     },
 
     // دریافتی به مبلغ
     receiptPrice: {
       type: Number,
-      required: [true, "شماره رسید الزامی است"],
+      required: [true, "مبلغ دریافتی الزامی است"],
     },
     // صندوق اولیه
     financialFund: {
@@ -84,6 +105,10 @@ const paycheckSchema = new mongoose.Schema(
         "pay", // پرداختی
       ],
     },
+
+    image:{
+      type:String
+    }
   },
   {
     timestamps: true,

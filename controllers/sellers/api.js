@@ -12,6 +12,7 @@ const BankAccount = require("../../models/BankAccount");
 const FinancialFund = require("../../models/FinancialFund");
 const httpStatus = require("http-status-codes");
 const BankCheck = require("../../models/BankCheck");
+const Paycheck = require("../../models/Paycheck");
 const { ObjectId } = require("mongoose").Types;
 
 // *********************************************************************************
@@ -2385,7 +2386,6 @@ exports.deleteCheck = async (req, res) => {
   }
 };
 
-
 // // ******************************************************************************
 // ************************************ Financial Fund ********************************
 // *********************************************************************************
@@ -2456,27 +2456,17 @@ exports.getSingleFinancialFund = async (req, res) => {
 // # create financial fund -> POST -> sellers (PRIVATE)
 // # route -> /api/sellers/funds
 exports.createFinancialFund = async (req, res) => {
-  const {
-    fundName,
-    initialStock,
-    moreInfo,
-  } = req.body;
+  const { fundName, initialStock, moreInfo } = req.body;
 
   try {
-    if (
-      !fundName ||
-      !initialStock ||
-      !moreInfo 
-    ) {
+    if (!fundName || !initialStock || !moreInfo) {
       return res.status(httpStatus.BAD_REQUEST).json({
         msg: "برای ایجاد صندوق باید همه فیلدها را پر کنید.",
         status: "failure",
       });
     }
 
-    const fundPath = req.file
-      ? req.file.path.replace("public", "")
-      : undefined;
+    const fundPath = req.file ? req.file.path.replace("public", "") : undefined;
 
     let newFinancialFund = await FinancialFund.create({
       image: fundPath || "default.jpg",
@@ -2512,11 +2502,7 @@ exports.createFinancialFund = async (req, res) => {
 // # route -> /api/sellers/funds/:fundId
 exports.updateFinancialFund = async (req, res) => {
   try {
-    const {
-      fundName,
-      initialStock,
-      moreInfo,
-    } = req.body;
+    const { fundName, initialStock, moreInfo } = req.body;
 
     const updateData = {
       fundName,
@@ -2597,7 +2583,7 @@ exports.updateFundImage = async (req, res) => {
     const updatedFinancialFund = await FinancialFund.findOneAndUpdate(
       {
         _id: req.params.fundId,
-        seller: req.user.id, 
+        seller: req.user.id,
       },
       {
         image: req.file.path,
@@ -2654,6 +2640,318 @@ exports.deleteFund = async (req, res) => {
 
       return res.status(httpStatus.OK).json({
         msg: "صندوق شماپاک شد",
+        status: "success",
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "درخواست شما نامعتبر است",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// // ******************************************************************************
+// ************************************ Paychecks ********************************
+// *********************************************************************************
+
+// # description -> HTTP VERB -> Accesss
+// # get all paychecks -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/paychecks/:paycheckType
+exports.getAllPaychecks = async (req, res) => {
+  try {
+    const paychecks = await Paycheck.find({
+      seller: req.user.id,
+      paycheckType: req.params.paycheckType,
+    }).populate("seller");
+
+    if (paychecks && paychecks.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام معاملات های شما پیدا شدند",
+        status: "success",
+        count: paychecks.length,
+        paychecks,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هنوز معاملاتی اضافه نشده است",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get single paycheck -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/paychecks/:paycheckType/:pcId
+exports.getSinglePaycheck = async (req, res) => {
+  try {
+    const fund = await Paycheck.findOne({
+      seller: req.user.id,
+      _id: req.params.pcId,
+      paycheckType: req.params.paycheckType,
+    }).populate("seller");
+
+    if (fund) {
+      return res.status(httpStatus.OK).json({
+        msg: "معاملات شماپیدا شد",
+        status: "success",
+        fund,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "معاملات پیدا نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create paycheck -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/paychecks/:paycheckType
+exports.createPaycheck = async (req, res) => {
+  const {
+    payer,
+    recipient,
+    receiptPrice,
+    financialFund,
+    checkoutMethod,
+    moreInfo,
+    receiptDate,
+    paycheckType,
+  } = req.body;
+
+  try {
+    if (
+      !payer ||
+      !recipient ||
+      !receiptPrice ||
+      !financialFund ||
+      !checkoutMethod ||
+      !moreInfo ||
+      !receiptDate ||
+      !paycheckType
+    ) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد معامله باید همه فیلدها را پر کنید.",
+        status: "failure",
+      });
+    }
+
+    const paycheckPath = req.file
+      ? req.file.path.replace("public", "")
+      : undefined;
+
+    let newPaycheck = await Paycheck.create({
+      image: paycheckPath || "default.jpg",
+      seller: req.user.id,
+      payer,
+      recipient,
+      receiptPrice,
+      financialFund,
+      checkoutMethod,
+      moreInfo,
+      receiptDate,
+      paycheckType,
+    });
+
+    if (newPaycheck) {
+      return res.status(httpStatus.OK).json({
+        msg: "معامله شماایجاد شد",
+        status: "success",
+        fund: newPaycheck,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "معامله ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update paycheck -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/paychecks/:paycheckType/:pcId/update-paycheck
+exports.updatePaycheck = async (req, res) => {
+  try {
+    const {
+      payer,
+      recipient,
+      receiptPrice,
+      financialFund,
+      checkoutMethod,
+      moreInfo,
+      receiptDate,
+      paycheckType,
+    } = req.body;
+
+    const updateData = {
+      payer,
+      recipient,
+      receiptPrice,
+      financialFund,
+      checkoutMethod,
+      moreInfo,
+      receiptDate,
+      paycheckType,
+    };
+
+    const updatedPaycheck = await Paycheck.findByIdAndUpdate(
+      req.params.pcId,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedPaycheck) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "معامله مورد نظر یافت نشد",
+      });
+    }
+
+    return res.status(httpStatus.OK).json({
+      msg: "اطلاعات معامله با موفقیت ویرایش شد",
+      status: "success",
+      fund: updatedPaycheck,
+    });
+  } catch (err) {
+    console.error(err);
+
+    // Handle specific mongoose errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه معامله نامعتبر است",
+      });
+    }
+
+    if (err.name === "ValidationError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "داده‌های ارسالی نامعتبر هستند",
+        errors: err.errors,
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. لطفاً دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update paycheck image -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/paychecks/:paycheckType/:pcId/update-paycheck-image
+exports.updatePaycheckImage = async (req, res) => {
+  try {
+    // 1. Validate image exists
+    if (!req.file) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "لطفاً یک تصویر معتبر ارسال کنید",
+      });
+    }
+
+    // 2. Validate file type (optional but recommended)
+    const validMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validMimeTypes.includes(req.file.mimetype)) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "فرمت تصویر نامعتبر است. فقط تصاویر JPEG, PNG و WebP قابل قبول هستند",
+      });
+    }
+
+    // 3. Update Bank fund image (only if they belong to the requesting seller)
+    const updatedPaycheck = await Paycheck.findOneAndUpdate(
+      {
+        _id: req.params.pcId,
+        seller: req.user.id,
+      },
+      {
+        image: req.file.path,
+        imageMimeType: req.file.mimetype, // Store mime type for future reference
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedPaycheck) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "معامله مورد نظر یافت نشد یا شما مجوز ویرایش آن را ندارید",
+      });
+    }
+
+    // 5. Return success response
+    return res.status(httpStatus.OK).json({
+      status: "success",
+      msg: "تصویر معامله با موفقیت به‌روزرسانی شد",
+      image: updatedPaycheck.image,
+    });
+  } catch (err) {
+    console.error("Update fund image error:", err);
+
+    // Handle specific errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه معامله نامعتبر است",
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطا در سرور هنگام آپلود تصویر",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # delete paycheck -> DELETE -> sellers (PRIVATE)
+// # route -> /api/sellers/paychecks/:paycheckType/:pcId
+exports.deletePaycheck = async (req, res) => {
+  try {
+    let findPaycheck = await Paycheck.findOne({
+      _id: req.params.pcId,
+    });
+
+    if (findPaycheck) {
+      await Paycheck.findByIdAndDelete(req.params.pcId);
+
+      return res.status(httpStatus.OK).json({
+        msg: "معامله شماپاک شد",
         status: "success",
       });
     } else {

@@ -397,5 +397,54 @@ router.delete(
 );
 
 
+// ************************************************************************
+// ******************************* Paychecks *******************************
+// ************************************************************************
+
+router.get(
+  "/paychecks/:paycheckType",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllPaychecks
+);
+
+router.get(
+  "/paychecks/:paycheckType/:pcId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getSinglePaycheck
+);
+
+router.post(
+  "/paychecks",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.createPaycheck
+);
+
+router.put(
+  "/paychecks/:paycheckType/:pcId/update-paycheck",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.updatePaycheck
+);
+
+router.put(
+  "/paychecks/:paycheckType/:pcId/update-paycheck-image",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.updatePaycheckImage
+);
+
+router.delete(
+  "/paychecks/:paycheckType/:pcId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.deletePaycheck
+);
+
+
 
 module.exports = router;
