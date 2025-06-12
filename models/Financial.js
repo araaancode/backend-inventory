@@ -85,7 +85,7 @@ const financialSchema = new mongoose.Schema(
       },
     ],
     // پرداختی یا دریافتی
-    receipt: {
+    receiptPay: {
       type: mongoose.Schema.ObjectId,
       ref: "Paycheck",
       validate: {
@@ -98,7 +98,7 @@ const financialSchema = new mongoose.Schema(
       },
     },
     //  چک دریافتی یا پرداختی
-    receiptChecks: {
+    receiptPayChecks: {
       type: [
         {
           type: mongoose.Schema.ObjectId,

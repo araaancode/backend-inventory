@@ -6,6 +6,7 @@ const validator = require("validator");
 
 const bankCheckSchema = new mongoose.Schema(
   {
+    // پرداخت کننده
     payer: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
@@ -18,6 +19,7 @@ const bankCheckSchema = new mongoose.Schema(
         message: "پرداخت کننده معتبر نیست",
       },
     },
+    // دریافت کننده
     recipient: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
@@ -30,31 +32,48 @@ const bankCheckSchema = new mongoose.Schema(
         message: "دریافت کننده معتبر نیست",
       },
     },
-    checkPrice:{
-      type:Number,
+    // مبلغ چک
+    checkPrice: {
+      type: Number,
     },
-    dueDate:{
-      type:Date,
+    // تاریخ سررسید
+    dueDate: {
+      type: Date,
     },
-    receivingCheckDate:{
-      type:Date
+    // تاریخ و ساعت  دریافت
+    receivingCheckDate: {
+      type: Date,
     },
-    Bank:{
-      type:String
+    // بانک صادر کننده
+    bank: {
+      type: String,
     },
-    bankCheckNumber:{
-      type:String,
+    // شماره چک
+    bankCheckNumber: {
+      type: String,
     },
-    moreInfo:{
-      type:String,
+    // اطلاعات بیشتر
+    moreInfo: {
+      type: String,
     },
     // واگذاری چک
-    endorsementCheck:{
-      type:String
+    endorsementCheck: {
+      type: String,
     },
     //  تاریخ واگذاری چک
-    endorsementCheckDate:{
-      type:Date
+    endorsementCheckDate: {
+      type: Date,
+    },
+
+    // نوع چک
+    checkType: {
+      type: String,
+      trim: true,
+      required: true,
+      enum: [
+        "receipt", // دریافتی
+        "pay", // پرداختی
+      ],
     },
   },
   { timestamps: true }
