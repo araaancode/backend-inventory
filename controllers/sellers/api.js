@@ -5,12 +5,12 @@ const {
   SubGroup,
   ProductGroup,
 } = require("../../models/Product");
+const Person = require("../../models/Person");
 const Service = require("../../models/Service");
 const Cost = require("../../models/Cost");
 const BankAccount = require("../../models/BankAccount");
 const httpStatus = require("http-status-codes");
-const { ObjectId } = require('mongoose').Types;
-
+const { ObjectId } = require("mongoose").Types;
 
 // *********************************************************************************
 // ************************************ Factors ************************************
@@ -585,7 +585,6 @@ exports.createProduct = async (req, res) => {
       };
 
       console.log(new ObjectId(req.user.id));
-      
 
       let newProduct = await Product.create({
         seller: new ObjectId(req.user.id),
@@ -599,7 +598,7 @@ exports.createProduct = async (req, res) => {
         purchasePrice: req.body.purchasePrice,
         sellingPrice: req.body.sellingPrice,
         secondSellingPrice: req.body.secondSellingPrice,
-        moreInfo:moreInfoObj
+        moreInfo: moreInfoObj,
       });
 
       if (newProduct) {
@@ -674,7 +673,6 @@ exports.createProduct = async (req, res) => {
         msg: "نوع واحد نامعتبر است",
       });
     }
-
   } catch (err) {
     console.log(err);
     res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
@@ -787,12 +785,21 @@ exports.updateProductImage = async (req, res) => {
 // # route -> /api/sellers/products/:productId
 exports.deleteProduct = async (req, res) => {
   try {
-    await Product.findByIdAndDelete(req.params.productId);
+    let findProduct = await Product.findOne({ _id: req.params.productId });
 
-    res.status(httpStatus.OK).json({
-      msg: "محصول شما پاک شد",
-      status: "success",
-    });
+    if (findProduct) {
+      await Product.findByIdAndDelete(req.params.productId);
+
+      return res.status(httpStatus.OK).json({
+        msg: "محصول شماپاک شد",
+        status: "success",
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "درخواست شما نامعتبر است",
+        status: "failure",
+      });
+    }
   } catch (err) {
     console.log(err);
     res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
@@ -1274,7 +1281,7 @@ exports.deleteCost = async (req, res) => {
   }
 };
 
-// // ****************************************************************************** 
+// // ******************************************************************************
 // ************************************ Bank Account *******************************
 // *********************************************************************************
 // Utility functions for bank validation
@@ -1690,20 +1697,360 @@ exports.setDefaultBankAccount = async (req, res) => {
   }
 };
 
-
-// // ****************************************************************************** 
+// // ******************************************************************************
 // ************************************ Persons(seller,customer) *******************************
 // *********************************************************************************
 
-// Create new bank account
-exports.createBankAccount = async (req, res) => {
+// # description -> HTTP VERB -> Accesss
+// # get all persons -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/persons
+exports.getAllPersons = async (req, res) => {
   try {
-    let newPerson=await User.create()
-  } catch (error) {
-    console.error("Error creating bank account:", error);
+    const persons = await Person.find({ seller: req.user.id }).populate(
+      "seller"
+    );
+
+    if (persons && persons.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام اشخاص شما پیدا شدند",
+        status: "success",
+        count: persons.length,
+        persons,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هنوز اشخاص اضافه نشده اند",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
     res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
       status: "error",
-      msg: "خطای سرور در ایجاد حساب بانکی",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get single person -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/persons/:personId
+exports.getSinglePerson = async (req, res) => {
+  try {
+    const person = await Person.findOne({
+      seller: req.user.id,
+      _id: req.params.personId,
+    }).populate("seller");
+
+    if (person) {
+      return res.status(httpStatus.OK).json({
+        msg: "شخص شما پیدا شد",
+        status: "success",
+        person,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "شخص پیدا نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create pPerson -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/persons
+exports.createPerson = async (req, res) => {
+  const {
+    personName,
+    personGroups,
+    previousFinancialAccount,
+    phone,
+    moreInfo,
+    postalCode,
+    birthDate,
+    nationalCode,
+    economicCode,
+    lat,
+    lng,
+  } = req.body;
+
+  try {
+    if (
+      !personName ||
+      !personGroups ||
+      !previousFinancialAccount ||
+      !phone ||
+      !moreInfo ||
+      !postalCode ||
+      !birthDate ||
+      !nationalCode ||
+      !economicCode ||
+      !lat ||
+      !lng
+    ) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد شخص باید همه فیلدها را پر کنید.",
+        status: "failure",
+      });
+    }
+
+    const personPath = req.file
+      ? req.file.path.replace("public", "")
+      : undefined;
+
+    let positin = { type: { lat, lng } };
+
+    let newPerson = await Person.create({
+      image: personPath || "default.jpg",
+      seller: req.user.id,
+      personName,
+      personGroups,
+      previousFinancialAccount,
+      moreInfo,
+      postalCode,
+      birthDate,
+      nationalCode,
+      economicCode,
+      positin,
+    });
+
+    if (newPerson) {
+      return res.status(httpStatus.OK).json({
+        msg: "شخص شما ایجاد شد",
+        status: "success",
+        service: newPerson,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "شخص ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update person -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/persons/:personId/update-person
+exports.updatePerson = async (req, res) => {
+  try {
+    const {
+      personName,
+      personGroups,
+      previousFinancialAccount,
+      phone,
+      moreInfo,
+      postalCode,
+      birthDate,
+      nationalCode,
+      economicCode,
+      lat,
+      lng,
+    } = req.body;
+
+    // Validate and sanitize the financial account value
+    let sanitizedFinancialAccount = previousFinancialAccount;
+    if (previousFinancialAccount !== undefined) {
+      sanitizedFinancialAccount = Number(previousFinancialAccount);
+      if (isNaN(sanitizedFinancialAccount)) {
+        return res.status(httpStatus.BAD_REQUEST).json({
+          status: "error",
+          msg: "مقدار حساب مالی قبلی نامعتبر است",
+        });
+      }
+    }
+
+    // Handle position data
+    let position = null;
+    if (lat !== undefined && lng !== undefined) {
+      position = {
+        lat: Number(lat),
+        lng: Number(lng),
+      };
+
+      // Validate coordinates
+      if (isNaN(position.lat) || isNaN(position.lng)) {
+        return res.status(httpStatus.BAD_REQUEST).json({
+          status: "error",
+          msg: "مقادیر مختصات جغرافیایی نامعتبر است",
+        });
+      }
+    }
+
+    const updateData = {
+      personName,
+      personGroups,
+      moreInfo,
+      postalCode,
+      birthDate,
+      nationalCode,
+      economicCode,
+      phone, // Added phone which was missing in original update
+    };
+
+    // Only add fields that were actually provided
+    if (previousFinancialAccount !== undefined) {
+      updateData.previousFinancialAccount = sanitizedFinancialAccount;
+    }
+
+    if (position) {
+      updateData.position = position;
+    }
+
+    const updatedPerson = await Person.findByIdAndUpdate(
+      req.params.personId,
+      updateData,
+      {
+        new: true,
+        runValidators: true, // Ensure validators run on update
+      }
+    );
+
+    if (!updatedPerson) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "شخص مورد نظر یافت نشد",
+      });
+    }
+
+    return res.status(httpStatus.OK).json({
+      msg: "اطلاعات شخص با موفقیت ویرایش شد",
+      status: "success",
+      person: updatedPerson,
+    });
+  } catch (err) {
+    console.error("Update person error:", err);
+
+    // Handle specific mongoose errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه شخص نامعتبر است",
+      });
+    }
+
+    if (err.name === "ValidationError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "داده‌های ارسالی نامعتبر هستند",
+        errors: err.errors,
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. لطفاً دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update person image -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/persons/:personId/update-person-image
+exports.updatePersonImage = async (req, res) => {
+  try {
+    // 1. Validate image exists
+    if (!req.file) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "لطفاً یک تصویر معتبر ارسال کنید",
+      });
+    }
+
+    // 2. Validate file type (optional but recommended)
+    const validMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validMimeTypes.includes(req.file.mimetype)) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "فرمت تصویر نامعتبر است. فقط تصاویر JPEG, PNG و WebP قابل قبول هستند",
+      });
+    }
+
+    // 3. Update person image (only if they belong to the requesting seller)
+    const updatedPerson = await Person.findOneAndUpdate(
+      {
+        _id: req.params.personId,
+        seller: req.user.id, // Ensure person belongs to the seller making the request
+      },
+      {
+        image: req.file.path,
+        imageMimeType: req.file.mimetype, // Store mime type for future reference
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedPerson) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "شخص مورد نظر یافت نشد یا شما مجوز ویرایش آن را ندارید",
+      });
+    }
+
+    // 5. Return success response
+    return res.status(httpStatus.OK).json({
+      status: "success",
+      msg: "تصویر پروفایل با موفقیت به‌روزرسانی شد",
+      image: updatedPerson.image,
+    });
+  } catch (err) {
+    console.error("Update person image error:", err);
+
+    // Handle specific errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه شخص نامعتبر است",
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطا در سرور هنگام آپلود تصویر",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # delete person -> DELETE -> sellers (PRIVATE)
+// # route -> /api/sellers/persons/:personId
+exports.deletePerson = async (req, res) => {
+  try {
+    let findperson = await Person.findOne({ _id: req.params.personId });
+
+    if (findperson) {
+      await Person.findByIdAndDelete(req.params.personId);
+
+      return res.status(httpStatus.OK).json({
+        msg: "شخص شماپاک شد",
+        status: "success",
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "درخواست شما نامعتبر است",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
     });
   }
 };

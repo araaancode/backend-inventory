@@ -20,7 +20,7 @@ const personSchema = new mongoose.Schema(
     personGroups: {
       type: String,
       enum: {
-        values: ["sellers", "customers"],
+        values: ["seller", "customer"],
         message: "Person group must be either 'sellers' or 'customers'"
       },
       required: [true, "Person group is required"]
@@ -79,11 +79,10 @@ const personSchema = new mongoose.Schema(
         },
         message: props => `${props.value} is not a valid Iranian national code`
       },
-      unique: true,
       sparse: true
     },
 
-    economicCode: {
+    economicCode: { // example 123456789012 
       type: String,
       validate: {
         validator: function(v) {
@@ -121,14 +120,8 @@ const personSchema = new mongoose.Schema(
       default: true
     },
 
-    tags: {
-      type: [String],
-      validate: {
-        validator: function(tags) {
-          return tags.length <= 10;
-        },
-        message: "Cannot have more than 10 tags"
-      }
+    image: {
+      type: String,
     }
   },
   {

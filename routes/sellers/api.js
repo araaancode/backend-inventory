@@ -40,7 +40,6 @@ router.post(
   sellerApiCtrls.createSubGroup
 );
 
-
 router.get(
   "/products",
   authenticateUser,
@@ -99,7 +98,6 @@ router.delete(
   sellerApiCtrls.deleteProduct
 );
 
-
 // ************************************************************************
 // ******************************* Services *******************************
 // ************************************************************************
@@ -148,7 +146,6 @@ router.delete(
   sellerApiCtrls.deleteService
 );
 
-
 // ************************************************************************
 // ******************************* Costs *******************************
 // ************************************************************************
@@ -196,8 +193,6 @@ router.delete(
   authorizeRoles("seller"),
   sellerApiCtrls.deleteCost
 );
-
-
 
 // ************************************************************************
 // ******************************* Bank Accounts *******************************
@@ -255,6 +250,52 @@ router.delete(
   sellerApiCtrls.deleteBankAccount
 );
 
+// ************************************************************************
+// ******************************* Persons(seller,customer) *******************************
+// ************************************************************************
 
+router.get(
+  "/persons",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllPersons
+);
+
+router.get(
+  "/persons/:personId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getSinglePerson
+);
+
+router.post(
+  "/persons",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.createPerson
+);
+
+router.put(
+  "/persons/:personId/update-person",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.updatePerson
+);
+
+router.put(
+  "/persons/:personId/update-person-image",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.updatePersonImage
+);
+
+router.delete(
+  "/persons/:personId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.deletePerson
+);
 
 module.exports = router;
