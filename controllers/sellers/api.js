@@ -10,6 +10,7 @@ const Service = require("../../models/Service");
 const Cost = require("../../models/Cost");
 const BankAccount = require("../../models/BankAccount");
 const httpStatus = require("http-status-codes");
+const BankCheck = require("../../models/BankCheck");
 const { ObjectId } = require("mongoose").Types;
 
 // *********************************************************************************
@@ -1764,7 +1765,7 @@ exports.getSinglePerson = async (req, res) => {
 };
 
 // # description -> HTTP VERB -> Accesss
-// # create pPerson -> POST -> sellers (PRIVATE)
+// # create  -> POST -> sellers (PRIVATE)
 // # route -> /api/sellers/persons
 exports.createPerson = async (req, res) => {
   const {
@@ -1819,6 +1820,7 @@ exports.createPerson = async (req, res) => {
       nationalCode,
       economicCode,
       positin,
+      phone,
     });
 
     if (newPerson) {
@@ -2038,6 +2040,333 @@ exports.deletePerson = async (req, res) => {
 
       return res.status(httpStatus.OK).json({
         msg: "شخص شماپاک شد",
+        status: "success",
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "درخواست شما نامعتبر است",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// // ******************************************************************************
+// ************************************ Bank Checks *******************************
+// *********************************************************************************
+
+// # description -> HTTP VERB -> Accesss
+// # get all checks -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/checks/:checkType
+exports.getAllChecks = async (req, res) => {
+  try {
+    const checks = await BankCheck.find({
+      seller: req.user.id,
+      checkType: req.params.checkType,
+    }).populate("seller");
+
+    if (checks && checks.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام چک های شما پیدا شدند",
+        status: "success",
+        count: checks.length,
+        checks,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هنوز چکی اضافه نشده است",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get single check -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/checks/:checkType/:checkId
+exports.getSingleCheck = async (req, res) => {
+  try {
+    const check = await BankCheck.findOne({
+      seller: req.user.id,
+      _id: req.params.checkId,
+      checkType: req.params.checkType,
+    }).populate("seller");
+
+    if (check) {
+      return res.status(httpStatus.OK).json({
+        msg: "چک بانکی شماپیدا شد",
+        status: "success",
+        check,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "چک پیدا نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create check -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/checks
+exports.createCheck = async (req, res) => {
+  const {
+    payer,
+    recipient,
+    checkPrice,
+    dueDate,
+    receivingCheckDate,
+    bank,
+    bankCheckNumber,
+    moreInfo,
+    endorsementCheck,
+    endorsementCheckDate,
+    checkType,
+  } = req.body;
+
+  try {
+    if (
+      !payer ||
+      !recipient ||
+      !checkPrice ||
+      !dueDate ||
+      !receivingCheckDate ||
+      !bank ||
+      !bankCheckNumber ||
+      !moreInfo ||
+      !endorsementCheck ||
+      !endorsementCheckDate ||
+      !checkType
+    ) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد چک باید همه فیلدها را پر کنید.",
+        status: "failure",
+      });
+    }
+
+    const checkBankPath = req.file
+      ? req.file.path.replace("public", "")
+      : undefined;
+
+    let newBankCheck = await BankCheck.create({
+      image: checkBankPath || "default.jpg",
+      seller: req.user.id,
+      payer,
+      recipient,
+      checkPrice,
+      dueDate,
+      receivingCheckDate,
+      bank,
+      bankCheckNumber,
+      moreInfo,
+      endorsementCheck,
+      endorsementCheckDate,
+      checkType,
+    });
+
+    if (newBankCheck) {
+      return res.status(httpStatus.OK).json({
+        msg: "چک شما ایجاد شد",
+        status: "success",
+        service: newBankCheck,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "چک ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update check -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/checks/:checkId/update-check
+exports.updateCheck = async (req, res) => {
+  try {
+    const {
+      payer,
+      recipient,
+      checkPrice,
+      dueDate,
+      receivingCheckDate,
+      bank,
+      bankCheckNumber,
+      moreInfo,
+      endorsementCheck,
+      endorsementCheckDate,
+      checkType,
+    } = req.body;
+
+    const updateData = {
+      payer,
+      recipient,
+      checkPrice,
+      dueDate,
+      receivingCheckDate,
+      bank,
+      bankCheckNumber,
+      moreInfo,
+      endorsementCheck,
+      endorsementCheckDate,
+      checkType,
+    };
+
+    const updatedBankCheck = await BankCheck.findByIdAndUpdate(
+      req.params.checkId,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedBankCheck) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "چک مورد نظر یافت نشد",
+      });
+    }
+
+    return res.status(httpStatus.OK).json({
+      msg: "اطلاعات چک با موفقیت ویرایش شد",
+      status: "success",
+      person: updatedBankCheck,
+    });
+  } catch (err) {
+    console.error("Update person error:", err);
+
+    // Handle specific mongoose errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه چک نامعتبر است",
+      });
+    }
+
+    if (err.name === "ValidationError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "داده‌های ارسالی نامعتبر هستند",
+        errors: err.errors,
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. لطفاً دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update check image -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/checks/:checkId/update-check-image
+exports.updateCheckImage = async (req, res) => {
+  try {
+    // 1. Validate image exists
+    if (!req.file) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "لطفاً یک تصویر معتبر ارسال کنید",
+      });
+    }
+
+    // 2. Validate file type (optional but recommended)
+    const validMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validMimeTypes.includes(req.file.mimetype)) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "فرمت تصویر نامعتبر است. فقط تصاویر JPEG, PNG و WebP قابل قبول هستند",
+      });
+    }
+
+    // 3. Update Bank Check image (only if they belong to the requesting seller)
+    const updatedBankCheck = await BankCheck.findOneAndUpdate(
+      {
+        _id: req.params.checkId,
+        seller: req.user.id, // Ensure Bank Check belongs to the seller making the request
+      },
+      {
+        image: req.file.path,
+        imageMimeType: req.file.mimetype, // Store mime type for future reference
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedBankCheck) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "چک مورد نظر یافت نشد یا شما مجوز ویرایش آن را ندارید",
+      });
+    }
+
+    // 5. Return success response
+    return res.status(httpStatus.OK).json({
+      status: "success",
+      msg: "تصویر پروفایل با موفقیت به‌روزرسانی شد",
+      image: updatedBankCheck.image,
+    });
+  } catch (err) {
+    console.error("Update Bank Check image error:", err);
+
+    // Handle specific errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه چک نامعتبر است",
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطا در سرور هنگام آپلود تصویر",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # delete check -> DELETE -> sellers (PRIVATE)
+// # route -> /api/sellers/checks/:checkId
+exports.deleteCheck = async (req, res) => {
+  try {
+    let findBankCheck = await BankCheck.findOne({
+      _id: req.params.checkId,
+    });
+
+    if (findBankCheck) {
+      await BankCheck.findByIdAndDelete(req.params.checkId);
+
+      return res.status(httpStatus.OK).json({
+        msg: "چک شماپاک شد",
         status: "success",
       });
     } else {

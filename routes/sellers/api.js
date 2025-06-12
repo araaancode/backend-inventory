@@ -298,4 +298,53 @@ router.delete(
   sellerApiCtrls.deletePerson
 );
 
+
+// ************************************************************************
+// ******************************* Bank Checks *******************************
+// ************************************************************************
+
+router.get(
+  "/checks/:checkType",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllChecks
+);
+
+router.get(
+  "/checks/:checkType/:checkId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getSingleCheck
+);
+
+router.post(
+  "/checks",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.createCheck
+);
+
+router.put(
+  "/checks/:checkType/:checkId/update-check",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.updateCheck
+);
+
+router.put(
+  "/checks/:checkType/:checkId/update-check-image",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.updateCheckImage
+);
+
+router.delete(
+  "/checks/:checkType/:checkId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.deleteCheck
+);
+
 module.exports = router;
