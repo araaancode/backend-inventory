@@ -1274,8 +1274,8 @@ exports.deleteCost = async (req, res) => {
   }
 };
 
-// // *********************************************************************************
-// ************************************ Bank Account ***********************************
+// // ****************************************************************************** 
+// ************************************ Bank Account *******************************
 // *********************************************************************************
 // Utility functions for bank validation
 const validateBankCard = (cardNumber) => {
@@ -1686,6 +1686,24 @@ exports.setDefaultBankAccount = async (req, res) => {
     res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
       status: "error",
       msg: "خطای سرور در تنظیم حساب پیش‌فرض",
+    });
+  }
+};
+
+
+// // ****************************************************************************** 
+// ************************************ Persons(seller,customer) *******************************
+// *********************************************************************************
+
+// Create new bank account
+exports.createBankAccount = async (req, res) => {
+  try {
+    let newPerson=await User.create()
+  } catch (error) {
+    console.error("Error creating bank account:", error);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای سرور در ایجاد حساب بانکی",
     });
   }
 };
