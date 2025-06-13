@@ -84,6 +84,9 @@ const financialSchema = new mongoose.Schema(
         },
       },
     ],
+    // مبلغ کلی تخفیف
+    discountAmount: { type: Number },
+
     // پرداختی یا دریافتی
     receiptPay: {
       type: mongoose.Schema.ObjectId,
@@ -119,8 +122,7 @@ const financialSchema = new mongoose.Schema(
         message: "Cannot have more than 10 receipt checks",
       },
     },
-    // مبلغ کلی تخفیف
-    discountAmount:{type:Number},
+
     // تاریخ
     financialDate: {
       type: Date,
@@ -144,10 +146,22 @@ const financialSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // نوع
+    financialType: {
+      type: String,
+      trim: true,
+      required: [true, "نوع الزامی است"],
+      enum: [
+        "buy", // خرید
+        "sale", // فروش
+      ],
+    },
+
     // بررسی وجود مالیات بر ارزش افزوده
-    hasVat:{
-      type:Boolean
-    }
+    hasVat: {
+      type: Boolean,
+    },
+
   },
   {
     timestamps: true,
