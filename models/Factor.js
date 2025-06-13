@@ -3,89 +3,76 @@ const validator = require("validator");
 
 const factorSchema = new mongoose.Schema(
   {
+    // ایجاد  کننده
     seller: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
       required: [true, "seller reference is required"],
-      validate: {
-        validator: async function (value) {
-          const user = await mongoose.model("User").findById(value);
-          return !!user;
-        },
-        message: "No user found with this ID",
-      },
     },
+
+    // فروشنده
+    salesman: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: [true, "salesman reference is required"],
+      
+    },
+
+    // مشتری
     customer: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
       required: [true, "Customer reference is required"],
-      validate: {
-        validator: async function (value) {
-          const user = await mongoose.model("User").findById(value);
-          return !!user;
-        },
-        message: "No user found with this ID",
-      },
     },
+    // تاریخ و مشخصات
     factorDate: {
       type: Date,
       required: [true, "Invoice date is required"],
       default: Date.now,
-      validate: {
-        validator: function (value) {
-          return value <= new Date();
-        },
-        message: "Invoice date cannot be in the future",
-      },
     },
-    products: {
-      type: [
-        {
-          type: mongoose.Schema.ObjectId,
-          ref: "Product",
-          validate: {
-            validator: async function (value) {
-              const product = await mongoose.model("Product").findById(value);
-              return !!product;
-            },
-            message: "No product found with this ID",
-          },
+    // کالاها
+    products: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "Product",
+        count: {
+          type: Number,
+          default: 1,
+          min: 1,
         },
-      ],
-      validate: {
-        validator: function (products) {
-          return products.length > 0 || this.services.length > 0;
+        price: {
+          type: Number,
+          required: [true, "Price is required"],
+          min: 0,
         },
-        message: "Invoice must contain at least one product or service",
       },
-    },
-    services: {
-      type: [
-        {
-          type: mongoose.Schema.ObjectId,
-          ref: "Service",
-          validate: {
-            validator: async function (value) {
-              const service = await mongoose.model("Service").findById(value);
-              return !!service;
-            },
-            message: "No service found with this ID",
-          },
+    ],
+
+    // خدمات
+    services: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "Service",
+        count: {
+          type: Number,
+          default: 1,
+          min: 1,
         },
-      ],
-      validate: {
-        validator: function (services) {
-          return services.length > 0 || this.products.length > 0;
+        price: {
+          type: Number,
+          required: [true, "Price is required"],
+          min: 0,
         },
-        message: "Invoice must contain at least one product or service",
       },
-    },
+    ],
+    // مالیات
     tax: {
       type: Number,
       required: [true, "Tax amount is required"],
       min: [0, "Tax cannot be negative"],
       max: [100, "Tax cannot exceed 100%"],
     },
+    // نوع فاکتور
     factorType: {
       type: String,
       enum: [
@@ -94,6 +81,7 @@ const factorSchema = new mongoose.Schema(
       ],
       default: "proforma",
     },
+    // جمع نهایی
     totalPrice: {
       type: Number,
       required: [true, "Total price is required"],

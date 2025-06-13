@@ -40,13 +40,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "Please confirm your password"],
       validate: {
-        // This only works on CREATE and SAVE!!!
         validator: function (el) {
           return el === this.password;
         },
         message: "Passwords are not the same!",
       },
     },
+
     passwordChangedAt: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
@@ -59,9 +59,8 @@ const userSchema = new mongoose.Schema(
 
     isGuest: {
       type: Boolean,
-      default: false
+      default: false,
     },
-
 
     phone: {
       type: String,
@@ -87,10 +86,72 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // نام و نام خانوادگی
+    name: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+
+    // آدرس
+    address: {
+      type: String,
+      trim: true,
+      maxlength: 300,
+    },
+
+    // کد پستی
+    postalCode: {
+      type: String,
+      validate: {
+        validator: function (v) {
+          return /^[0-9]{10}$/.test(v);
+        },
+        message: (props) => `${props.value} is not a valid Iranian postal code`,
+      },
+    },
+
+    // کد ملی
+    nationalCode: {
+      type: String,
+      validate: {
+        validator: function (v) {
+          return /^[0-9]{10}$/.test(v);
+        },
+        message: (props) => `${props.value} is not a valid national code`,
+      },
+    },
+
+    // کد اقتصادی
+    economicode: {
+      type: String,
+      trim: true,
+      maxlength: 20,
+    },
+
+    // لوگوی فروشگاه
+    storeLogo: {
+      type: String,
+      default: "",
+    },
+
+    // عکس امضا
+    signatureImage: {
+      type: String,
+      default: "",
+    },
+
+    // عکس مهر
+    stampImage: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );
 
+// Middleware and methods
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12);
