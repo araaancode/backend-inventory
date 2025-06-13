@@ -3019,13 +3019,13 @@ exports.getSingleFinancial = async (req, res) => {
 
     if (fund) {
       return res.status(httpStatus.OK).json({
-        msg: "داده های شماپیدا شد",
+        msg: "داده شماپیدا شد",
         status: "success",
         fund,
       });
     } else {
       return res.status(httpStatus.NOT_FOUND).json({
-        msg: "داده های پیدا نشد",
+        msg: "داده پیدا نشد",
         status: "success",
       });
     }
