@@ -447,4 +447,55 @@ router.delete(
 
 
 
+// ************************************************************************
+// ******************************* Financial ******************************
+// ************************************************************************
+
+router.get(
+  "/financials/:financialType",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllFinancials
+);
+
+router.get(
+  "/financials/:financialType/:financialId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getSingleFinancial
+);
+
+router.post(
+  "/financials",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.createFinancial
+);
+
+router.put(
+  "/financials/:financialType/:financialId/update-financial",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.updateFinancial
+);
+
+router.put(
+  "/financials/:financialType/:financialId/update-financial-image",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.updateFinancialImage
+);
+
+router.delete(
+  "/financials/:financialType/:financialId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.deleteFinancial
+);
+
+
+
+
 module.exports = router;

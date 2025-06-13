@@ -3,7 +3,7 @@ const validator = require("validator");
 
 const financialSchema = new mongoose.Schema(
   {
-    // فروشنده
+    // ایجاد کننده
     seller: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
@@ -16,6 +16,21 @@ const financialSchema = new mongoose.Schema(
         message: "Invalid seller reference - user not found",
       },
     },
+
+    // فروشنده
+    salesman: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: [true, "salesman reference is required"],
+      validate: {
+        validator: async function (value) {
+          const user = await mongoose.model("User").findById(value);
+          return !!user;
+        },
+        message: "Invalid salesman reference - user not found",
+      },
+    },
+
     // مشتری
     customer: {
       type: mongoose.Schema.ObjectId,
@@ -34,16 +49,6 @@ const financialSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.ObjectId,
         ref: "Product",
-        validate: {
-          validator: async function (value) {
-            // Cache the model lookup for better performance
-            if (!this.productModel)
-              this.productModel = mongoose.model("Product");
-            const product = await this.productModel.findById(value);
-            return !!product;
-          },
-          message: "Product not found",
-        },
         count: {
           type: Number,
           default: 1,
@@ -62,16 +67,6 @@ const financialSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.ObjectId,
         ref: "Service",
-        validate: {
-          validator: async function (value) {
-            // Cache the model lookup for better performance
-            if (!this.serviceModel)
-              this.serviceModel = mongoose.model("service");
-            const service = await this.serviceModel.findById(value);
-            return !!service;
-          },
-          message: "service not found",
-        },
         count: {
           type: Number,
           default: 1,
@@ -89,16 +84,8 @@ const financialSchema = new mongoose.Schema(
 
     // پرداختی یا دریافتی
     receiptPay: {
-      type: mongoose.Schema.ObjectId,
-      ref: "Paycheck",
-      validate: {
-        validator: async function (value) {
-          if (!value) return true; // Optional field
-          const paycheck = await mongoose.model("Paycheck").findById(value);
-          return !!paycheck;
-        },
-        message: "Invalid paycheck reference - paycheck not found",
-      },
+      type: Number,
+      
     },
     //  چک دریافتی یا پرداختی
     receiptPayChecks: {
@@ -162,6 +149,9 @@ const financialSchema = new mongoose.Schema(
       type: Boolean,
     },
 
+    image: {
+      type: String,
+    },
   },
   {
     timestamps: true,
