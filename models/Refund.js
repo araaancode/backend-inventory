@@ -1,96 +1,128 @@
-// models/Refund.js
-
-const crypto = require("crypto");
 const mongoose = require("mongoose");
 const validator = require("validator");
 
 const refundSchema = new mongoose.Schema(
   {
-    payer: {
+    // ایجاد  کننده
+    seller: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
-      required: [true, "پرداخت کننده الزامی است"],
-      validate: {
-        validator: async function (value) {
-          const user = await mongoose.model("User").findById(value);
-          return !!user;
-        },
-        message: "پرداخت کننده معتبر نیست",
-      },
-    },
-    recipient: {
-      type: mongoose.Schema.ObjectId,
-      ref: "User",
-      required: [true, "دریافت کننده الزامی است"],
-      validate: {
-        validator: async function (value) {
-          const user = await mongoose.model("User").findById(value);
-          return !!user;
-        },
-        message: "دریافت کننده معتبر نیست",
-      },
+      required: [true, "seller reference is required"],
     },
 
-    products: {
-      type: [
-        {
+    // فروشنده
+    salesman: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: [true, "salesman reference is required"],
+    },
+
+    // مشتری
+    customer: {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: [true, "Customer reference is required"],
+    },
+    // تاریخ و مشخصات
+    returnFactorDate: {
+      type: Date,
+      required: [true, "Invoice date is required"],
+      default: Date.now,
+    },
+    // نوع
+    returnFactorType: {
+      type: String,
+      enum: [
+        "returnFrombuy", // برگشت از خرید
+        "returnFromSale", // برگشت از فروش
+      ],
+      default: "returnFrombuy",
+    },
+    // کالاها
+    products: [
+      {
+        product: {
           type: mongoose.Schema.ObjectId,
           ref: "Product",
-          validate: {
-            validator: async function (value) {
-              const product = await mongoose.model("Product").findById(value);
-              return !!product;
-            },
-            message: "Invalid product reference - product not found",
-          },
         },
-      ],
-      validate: {
-        validator: function (products) {
-          return products.length > 0 || this.services.length > 0;
+        count: {
+          type: Number,
+          default: 1,
+          min: 1,
         },
-        message: "Transaction must contain at least one product or service",
+        price: {
+          type: Number,
+          required: [true, "Price is required"],
+          min: 0,
+        },
       },
-    },
-    services: {
-      type: [
-        {
+    ],
+
+    // خدمات
+    services: [
+      {
+        service: {
           type: mongoose.Schema.ObjectId,
           ref: "Service",
-          validate: {
-            validator: async function (value) {
-              const service = await mongoose.model("Service").findById(value);
-              return !!service;
-            },
-            message: "Invalid service reference - service not found",
-          },
         },
-      ],
-      validate: {
-        validator: function (services) {
-          return services.length > 0 || this.products.length > 0;
+        count: {
+          type: Number,
+          default: 1,
+          min: 1,
         },
-        message: "Transaction must contain at least one product or service",
+        price: {
+          type: Number,
+          required: [true, "Price is required"],
+          min: 0,
+        },
       },
-    },
+    ],
 
-    returningDate:{
-      type: Date,
-      required: [true, 'تاریخ رسید الزامی است'],
-      validate: {
-        validator: function(value) {
-          return value <= new Date();
-        },
-        message: 'تاریخ رسید نمی‌تواند در آینده باشد'
-      }
-    },
+    // اطلاعات بیشتر
     moreInfo: {
       type: String,
+      maxlength: [500, "Additional info cannot exceed 500 characters"],
       trim: true,
-      maxlength: [500, 'اطلاعات بیشتر نمی‌تواند بیش از ۵۰۰ کاراکتر باشد']
+    },
+    image: {
+      type: String,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
+
+// Auto-validate that at least products or services exist
+refundSchema.pre("validate", function (next) {
+  if (this.products.length === 0 && this.services.length === 0) {
+    this.invalidate(
+      "products",
+      "Invoice must contain products or services",
+      this.products
+    );
+  }
+  next();
+});
+
+// Calculate totalPrice if not provided (basic example)
+refundSchema.pre("save", async function (next) {
+  if (
+    this.isModified("products") ||
+    this.isModified("services") ||
+    this.isModified("tax")
+  ) {
+    if (typeof this.totalPrice !== "number") {
+      // Simple calculation - in real app you'd fetch actual prices
+      const productCount = this.products.length;
+      const serviceCount = this.services.length;
+      const baseAmount = productCount * 1000 + serviceCount * 500; // Example values
+      this.totalPrice = baseAmount + baseAmount * (this.tax / 100);
+    }
+  }
+  next();
+});
 
 module.exports = mongoose.model("Refund", refundSchema);
