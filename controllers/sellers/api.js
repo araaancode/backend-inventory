@@ -3299,3 +3299,326 @@ exports.deleteFinancial = async (req, res) => {
     });
   }
 };
+
+// // ******************************************************************************
+// ************************************ Factor **********************************
+// *********************************************************************************
+
+// # description -> HTTP VERB -> Accesss
+// # get all factors -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/factors/:factorType
+exports.getAllFactors = async (req, res) => {
+  try {
+    const factors = await Factor.find({
+      seller: req.user.id,
+      factorType: req.params.factorType,
+    }).populate("seller");
+
+    if (factors && factors.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام فاکتورهای شما پیدا شدند",
+        status: "success",
+        count: factors.length,
+        factors,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هنوز فاکتور اضافه نشده است",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get single factor -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/factors/:factorType/:factorId
+exports.getSingleFactor = async (req, res) => {
+  try {
+    const factor = await Factor.findOne({
+      seller: req.user.id,
+      _id: req.params.factorId,
+      factorType: req.params.factorType,
+    }).populate("seller");
+
+    if (factor) {
+      return res.status(httpStatus.OK).json({
+        msg: "فاکتور شماپیدا شد",
+        status: "success",
+        factor,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "فاکتور پیدا نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create factor -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/factors
+exports.createFactor = async (req, res) => {
+  const {
+    salesman,
+    customer,
+    factorDate,
+    products,
+    services,
+    tax,
+    factorType,
+  } = req.body;
+
+  try {
+    if (
+      !salesman ||
+      !customer ||
+      !factorDate ||
+      !products ||
+      !services ||
+      !tax ||
+      !factorType
+    ) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد فاکتور باید همه فیلدها را پر کنید.",
+        status: "failure",
+      });
+    }
+
+    let totalPrice = 0;
+
+    const factorPath = req.file
+      ? req.file.path.replace("public", "")
+      : undefined;
+
+    let productsObj = req.body.products;
+    let servicesObj = req.body.services;
+
+    productsObj.map((item) => {
+      totalPrice += item.price * item.count;
+    });
+
+    servicesObj.map((item) => {
+      totalPrice += item.price * item.count;
+    });
+
+    let newFactor = await Factor.create({
+      image: factorPath || "default.jpg",
+      seller: req.user.id,
+      salesman,
+      customer,
+      factorDate,
+      products,
+      services,
+      tax,
+      factorType,
+      totalPrice: totalPrice - (totalPrice * 4) / 100,
+    });
+
+    if (newFactor) {
+      return res.status(httpStatus.OK).json({
+        msg: "فاکتور شماایجاد شد",
+        status: "success",
+        fund: newFactor,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "فاکتور ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update factor -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/factors/:factorType/:factorId/update-factor
+exports.updateFactor = async (req, res) => {
+  try {
+    const {
+      salesman,
+      customer,
+      factorDate,
+      products,
+      services,
+      tax,
+      factorType,
+      totalPrice,
+    } = req.body;
+
+    const updateData = {
+      salesman,
+      customer,
+      factorDate,
+      products,
+      services,
+      tax,
+      factorType,
+      totalPrice,
+    };
+
+    const updatedFactor = await Factor.findByIdAndUpdate(
+      req.params.factorId,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedFactor) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "فاکتور مورد نظر یافت نشد",
+      });
+    }
+
+    return res.status(httpStatus.OK).json({
+      msg: "اطلاعات فاکتور با موفقیت ویرایش شد",
+      status: "success",
+      fund: updatedFactor,
+    });
+  } catch (err) {
+    console.error(err);
+
+    // Handle specific mongoose errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه فاکتور نامعتبر است",
+      });
+    }
+
+    if (err.name === "ValidationError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "فاکتور‌های ارسالی نامعتبر هستند",
+        errors: err.errors,
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. لطفاً دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update factors image -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/factors/:factorType/:factorId/update-factor-image
+exports.updateFactorImage = async (req, res) => {
+  try {
+    // 1. Validate image exists
+    if (!req.file) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "لطفاً یک تصویر معتبر ارسال کنید",
+      });
+    }
+
+    // 2. Validate file type (optional but recommended)
+    const validMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validMimeTypes.includes(req.file.mimetype)) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "فرمت تصویر نامعتبر است. فقط تصاویر JPEG, PNG و WebP قابل قبول هستند",
+      });
+    }
+
+    // 3. Update Bank fund image (only if they belong to the requesting seller)
+    const updatedFactor = await Factor.findOneAndUpdate(
+      {
+        _id: req.params.factorId,
+        seller: req.user.id,
+      },
+      {
+        image: req.file.path,
+        imageMimeType: req.file.mimetype, // Store mime type for future reference
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedFactor) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "فاکتور مورد نظر یافت نشد یا شما مجوز ویرایش آن را ندارید",
+      });
+    }
+
+    // 5. Return success response
+    return res.status(httpStatus.OK).json({
+      status: "success",
+      msg: "تصویر فاکتور با موفقیت به‌روزرسانی شد",
+      image: updatedFactor.image,
+    });
+  } catch (err) {
+    console.error("Update fund image error:", err);
+
+    // Handle specific errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه فاکتور نامعتبر است",
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطا در سرور هنگام آپلود تصویر",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # delete factor -> DELETE -> sellers (PRIVATE)
+// # route -> /api/sellers/factors/:factorType/:factorId
+exports.deleteFactor = async (req, res) => {
+  try {
+    let findFactor = await Factor.findOne({
+      _id: req.params.factorId,
+    });
+
+    if (findFactor) {
+      await Factor.findByIdAndDelete(req.params.factorId);
+
+      return res.status(httpStatus.OK).json({
+        msg: "فاکتور شماپاک شد",
+        status: "success",
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "درخواست شما نامعتبر است",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};

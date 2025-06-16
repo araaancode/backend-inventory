@@ -15,7 +15,6 @@ const factorSchema = new mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: "User",
       required: [true, "salesman reference is required"],
-      
     },
 
     // مشتری
@@ -33,8 +32,10 @@ const factorSchema = new mongoose.Schema(
     // کالاها
     products: [
       {
-        type: mongoose.Schema.ObjectId,
-        ref: "Product",
+        product: {
+          type: mongoose.Schema.ObjectId,
+          ref: "Product",
+        },
         count: {
           type: Number,
           default: 1,
@@ -51,8 +52,10 @@ const factorSchema = new mongoose.Schema(
     // خدمات
     services: [
       {
-        type: mongoose.Schema.ObjectId,
-        ref: "Service",
+        service: {
+          type: mongoose.Schema.ObjectId,
+          ref: "Service",
+        },
         count: {
           type: Number,
           default: 1,
@@ -93,6 +96,10 @@ const factorSchema = new mongoose.Schema(
         },
         message: "Total price cannot be less than tax amount",
       },
+    },
+
+    image: {
+      type: String,
     },
   },
   {

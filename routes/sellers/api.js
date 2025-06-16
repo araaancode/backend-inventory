@@ -495,6 +495,53 @@ router.delete(
   sellerApiCtrls.deleteFinancial
 );
 
+// ************************************************************************
+// ******************************* Factor ******************************
+// ************************************************************************
+
+router.get(
+  "/factors/:factorType",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllFactors
+);
+
+router.get(
+  "/factors/:factorType/:factorId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getSingleFactor
+);
+
+router.post(
+  "/factors",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.createFactor
+);
+
+router.put(
+  "/factors/:factorType/:factorId/update-factor",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.updateFactor
+);
+
+router.put(
+  "/factors/:factorType/:factorId/update-factor-image",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.updateFactorImage
+);
+
+router.delete(
+  "/factors/:factorType/:factorId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.deleteFactor
+);
 
 
 
