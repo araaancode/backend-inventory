@@ -592,4 +592,47 @@ router.delete(
 );
 
 
+// ************************************************************************
+// ******************************* Catalog *********************************
+// ************************************************************************
+
+router.get(
+  "/catalogs",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllCatalogs
+);
+
+router.get(
+  "/catalogs/:catalogId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getSingleCatalog
+);
+
+router.post(
+  "/catalogs",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.createCatalog
+);
+
+router.put(
+  "/catalogs/:catalogId/update-catalog",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.updateCatalog
+);
+
+
+router.delete(
+  "/catalogs/:catalogId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.deleteCatalog
+);
+
+
+
 module.exports = router;

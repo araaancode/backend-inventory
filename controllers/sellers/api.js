@@ -15,8 +15,8 @@ const BankCheck = require("../../models/BankCheck");
 const Paycheck = require("../../models/Paycheck");
 const Financial = require("../../models/Financial");
 const Refund = require("../../models/Refund");
+const Catalog = require("../../models/Catalog");
 const { ObjectId } = require("mongoose").Types;
-
 
 // *********************************************************************************
 // ************************************ Products ***********************************
@@ -3342,7 +3342,6 @@ exports.deleteFactor = async (req, res) => {
   }
 };
 
-
 // // ******************************************************************************
 // ************************************ Refund **********************************
 // *********************************************************************************
@@ -3422,7 +3421,7 @@ exports.createRefund = async (req, res) => {
     refundType,
     products,
     services,
-    moreInfo
+    moreInfo,
   } = req.body;
 
   try {
@@ -3433,10 +3432,10 @@ exports.createRefund = async (req, res) => {
       !refundType ||
       !products ||
       !services ||
-      !moreInfo 
+      !moreInfo
     ) {
       return res.status(httpStatus.BAD_REQUEST).json({
-        msg: "برای ایجاد فاکتور باید همه فیلدها را پر کنید.",
+        msg: "برای ایجاد استرداد باید همه فیلدها را پر کنید.",
         status: "failure",
       });
     }
@@ -3489,7 +3488,7 @@ exports.updateRefund = async (req, res) => {
       refundType,
       products,
       services,
-      moreInfo
+      moreInfo,
     } = req.body;
 
     const updateData = {
@@ -3499,7 +3498,7 @@ exports.updateRefund = async (req, res) => {
       refundType,
       products,
       services,
-      moreInfo
+      moreInfo,
     };
 
     const updatedRefund = await Refund.findByIdAndUpdate(
@@ -3537,7 +3536,7 @@ exports.updateRefund = async (req, res) => {
     if (err.name === "ValidationError") {
       return res.status(httpStatus.BAD_REQUEST).json({
         status: "error",
-        msg: "فاکتور‌های ارسالی نامعتبر هستند",
+        msg: "استردادهای ارسالی نامعتبر هستند",
         errors: err.errors,
       });
     }
@@ -3590,14 +3589,14 @@ exports.updateRefundImage = async (req, res) => {
     if (!updatedFactor) {
       return res.status(httpStatus.NOT_FOUND).json({
         status: "error",
-        msg: "فاکتور مورد نظر یافت نشد یا شما مجوز ویرایش آن را ندارید",
+        msg: "استرداد مورد نظر یافت نشد یا شما مجوز ویرایش آن را ندارید",
       });
     }
 
     // 5. Return success response
     return res.status(httpStatus.OK).json({
       status: "success",
-      msg: "تصویر فاکتور با موفقیت به‌روزرسانی شد",
+      msg: "تصویر استرداد با موفقیت به‌روزرسانی شد",
       image: updatedFactor.image,
     });
   } catch (err) {
@@ -3607,7 +3606,7 @@ exports.updateRefundImage = async (req, res) => {
     if (err.name === "CastError") {
       return res.status(httpStatus.BAD_REQUEST).json({
         status: "error",
-        msg: "شناسه فاکتور نامعتبر است",
+        msg: "شناسه استرداد نامعتبر است",
       });
     }
 
@@ -3631,7 +3630,201 @@ exports.deleteFactor = async (req, res) => {
       await Factor.findByIdAndDelete(req.params.refundId);
 
       return res.status(httpStatus.OK).json({
-        msg: "فاکتور شماپاک شد",
+        msg: "استرداد شماپاک شد",
+        status: "success",
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "درخواست شما نامعتبر است",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// // ******************************************************************************
+// ************************************ Catalog *************************************
+// *********************************************************************************
+
+// # description -> HTTP VERB -> Accesss
+// # get all catalog -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/catalogs
+exports.getAllCatalogs = async (req, res) => {
+  try {
+    const catalogs = await Catalog.find({
+      seller: req.user.id,
+    }).populate("seller");
+
+    if (catalogs && catalogs.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام کاتالوگهای شما پیدا شدند",
+        status: "success",
+        count: catalogs.length,
+        catalogs,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هنوز کاتالوگ اضافه نشده است",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get single catalog -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/catalogs/:catalogId
+exports.getSingleCatalog = async (req, res) => {
+  try {
+    const catalog = await Catalog.findOne({
+      seller: req.user.id,
+      _id: req.params.catalogId,
+    }).populate("seller");
+
+    if (catalog) {
+      return res.status(httpStatus.OK).json({
+        msg: "کاتالوگ شماپیدا شد",
+        status: "success",
+        catalog,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "کاتالوگ پیدا نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create catalog -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/catalogs
+exports.createCatalog = async (req, res) => {
+  const { title } = req.body;
+
+  try {
+    if (!title) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد کاتالوگ باید همه عنوان را وارد کنید.",
+        status: "failure",
+      });
+    }
+    let newCatalog = await Catalog.create({
+      seller: req.user.id,
+      title,
+    });
+
+    if (newCatalog) {
+      return res.status(httpStatus.OK).json({
+        msg: "کاتالوگ شماایجاد شد",
+        status: "success",
+        fund: newCatalog,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "کاتالوگ ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update catalog -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/catalogs/:catalogId/update-catalog
+exports.updateCatalog = async (req, res) => {
+  try {
+    const { title } = req.body;
+
+    const updateData = {
+      title
+    };
+
+    const updatedcatalog = await Catalog.findByIdAndUpdate(
+      req.params.catalogId,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedcatalog) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "کاتالوگ مورد نظر یافت نشد",
+      });
+    }
+
+    return res.status(httpStatus.OK).json({
+      msg: "اطلاعات کاتالوگ با موفقیت ویرایش شد",
+      status: "success",
+      fund: updatedcatalog,
+    });
+  } catch (err) {
+    console.error(err);
+
+    // Handle specific mongoose errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه کاتالوگ نامعتبر است",
+      });
+    }
+
+    if (err.name === "ValidationError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "کاتالوگهای ارسالی نامعتبر هستند",
+        errors: err.errors,
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. لطفاً دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # delete catalog -> DELETE -> sellers (PRIVATE)
+// # route -> /api/sellers/catalogs/:catalogId
+exports.deleteCatalog = async (req, res) => {
+  try {
+    let findCatalog = await Catalog.findOne({
+      _id: req.params.catalogId,
+    });
+
+    if (findCatalog) {
+      await Catalog.findByIdAndDelete(req.params.catalogId);
+
+      return res.status(httpStatus.OK).json({
+        msg: "کاتالوگ شماپاک شد",
         status: "success",
       });
     } else {
