@@ -7,7 +7,7 @@ const personSchema = new mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: "User",
       required: [true, "Seller reference is required"],
-      index: true // Added index for better query performance
+      index: true
     },
 
     personName: {

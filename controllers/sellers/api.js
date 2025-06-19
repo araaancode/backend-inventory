@@ -16,6 +16,7 @@ const Paycheck = require("../../models/Paycheck");
 const Financial = require("../../models/Financial");
 const Refund = require("../../models/Refund");
 const Catalog = require("../../models/Catalog");
+const Order = require("../../models/Order");
 const { ObjectId } = require("mongoose").Types;
 
 // *********************************************************************************
@@ -3761,7 +3762,7 @@ exports.updateCatalog = async (req, res) => {
     const { title } = req.body;
 
     const updateData = {
-      title
+      title,
     };
 
     const updatedcatalog = await Catalog.findByIdAndUpdate(
@@ -3825,6 +3826,211 @@ exports.deleteCatalog = async (req, res) => {
 
       return res.status(httpStatus.OK).json({
         msg: "کاتالوگ شماپاک شد",
+        status: "success",
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "درخواست شما نامعتبر است",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// // ******************************************************************************
+// ************************************ Order **************************************
+// *********************************************************************************
+
+// # description -> HTTP VERB -> Accesss
+// # get all orders -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/orders
+exports.getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({
+      seller: req.user.id,
+    }).populate("seller");
+
+    if (orders && orders.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام سفارشهای شما پیدا شدند",
+        status: "success",
+        count: orders.length,
+        orders,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هنوز سفارش اضافه نشده است",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get single order -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/orders/:orderId
+exports.getSingleOrder = async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      seller: req.user.id,
+      _id: req.params.orderId,
+    }).populate("seller");
+
+    if (order) {
+      return res.status(httpStatus.OK).json({
+        msg: "سفارش شماپیدا شد",
+        status: "success",
+        order,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "سفارش پیدا نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create order -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/orders
+exports.createOrder = async (req, res) => {
+  const { title, orderOwner, moreInfo, orderDate, catalog, status } = req.body;
+
+  try {
+    if (!title || !orderOwner || !moreInfo || !orderDate || !catalog) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد سفارش باید همه فیلدها را وارد کنید.",
+        status: "failure",
+      });
+    }
+    let neworder = await Order.create({
+      seller: req.user.id,
+      title,
+      orderOwner,
+      moreInfo,
+      orderDate,
+      catalog,
+      status,
+    });
+
+    if (neworder) {
+      return res.status(httpStatus.OK).json({
+        msg: "سفارش شماایجاد شد",
+        status: "success",
+        fund: neworder,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "سفارش ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update order -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/orders/:orderId/update-order
+exports.updateOrder = async (req, res) => {
+  try {
+    const { title, orderOwner, moreInfo, orderDate, catalog, status } =
+      req.body;
+
+    const updateData = {
+      title,
+      orderOwner,
+      moreInfo,
+      orderDate,
+      catalog,
+      status,
+    };
+
+    const updatedorder = await Order.findByIdAndUpdate(
+      req.params.orderId,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedorder) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "سفارش مورد نظر یافت نشد",
+      });
+    }
+
+    return res.status(httpStatus.OK).json({
+      msg: "اطلاعات سفارش با موفقیت ویرایش شد",
+      status: "success",
+      fund: updatedorder,
+    });
+  } catch (err) {
+    console.error(err);
+
+    // Handle specific mongoose errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه سفارش نامعتبر است",
+      });
+    }
+
+    if (err.name === "ValidationError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "سفارشهای ارسالی نامعتبر هستند",
+        errors: err.errors,
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. لطفاً دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # delete order -> DELETE -> sellers (PRIVATE)
+// # route -> /api/sellers/orders/:orderId
+exports.deleteOrder = async (req, res) => {
+  try {
+    let findOrder = await Order.findOne({
+      _id: req.params.orderId,
+    });
+
+    if (findOrder) {
+      await Order.findByIdAndDelete(req.params.orderId);
+
+      return res.status(httpStatus.OK).json({
+        msg: "سفارش شماپاک شد",
         status: "success",
       });
     } else {

@@ -634,5 +634,46 @@ router.delete(
 );
 
 
+// ************************************************************************
+// ******************************* Order *********************************
+// ************************************************************************
+
+router.get(
+  "/orders",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllOrders
+);
+
+router.get(
+  "/orders/:orderId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getSingleOrder
+);
+
+router.post(
+  "/orders",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.createOrder
+);
+
+router.put(
+  "/orders/:orderId/update-catalog",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.updateOrder
+);
+
+
+router.delete(
+  "/orders/:orderId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.deleteOrder
+);
+
 
 module.exports = router;
