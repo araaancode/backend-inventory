@@ -543,6 +543,53 @@ router.delete(
   sellerApiCtrls.deleteFactor
 );
 
+// ************************************************************************
+// ******************************* Refund ******************************
+// ************************************************************************
+
+router.get(
+  "/refunds/:refundType",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getAllRefunds
+);
+
+router.get(
+  "/refunds/:refundType/:refundId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.getSingleRefund
+);
+
+router.post(
+  "/refunds",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.createRefund
+);
+
+router.put(
+  "/refunds/:refundType/:refundId/update-factor",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.updateRefund
+);
+
+router.put(
+  "/refunds/:refundType/:refundId/update-factor-image",
+  authenticateUser,
+  authorizeRoles("seller"),
+  upload.single("image"),
+  sellerApiCtrls.updateFactorImage
+);
+
+router.delete(
+  "/refunds/:refundType/:refundId",
+  authenticateUser,
+  authorizeRoles("seller"),
+  sellerApiCtrls.deleteFactor
+);
 
 
 module.exports = router;

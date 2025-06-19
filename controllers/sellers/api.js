@@ -14,290 +14,9 @@ const httpStatus = require("http-status-codes");
 const BankCheck = require("../../models/BankCheck");
 const Paycheck = require("../../models/Paycheck");
 const Financial = require("../../models/Financial");
+const Refund = require("../../models/Refund");
 const { ObjectId } = require("mongoose").Types;
 
-// *********************************************************************************
-// ************************************ Factors ************************************
-// *********************************************************************************
-
-// # description -> HTTP VERB -> Accesss
-// # get all seller factors -> GET -> sellers (PRIVATE)
-exports.getAllFactors = async (req, res) => {
-  try {
-    const factors = await Factor.find({ seller: req.user.id }).populate(
-      "customer products services seller"
-    );
-
-    res.status(httpStatus.OK).json({
-      msg: "all your factors found",
-      status: "success",
-      count: factors.length,
-      factors,
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
-      status: "error",
-      msg: "خطای داخلی سرور. دوباره امتحان کنید",
-    });
-  }
-};
-
-// # description -> HTTP VERB -> Accesss
-// # get Single seller factor -> GET -> sellers (PRIVATE)
-exports.getSingleFactors = async (req, res) => {
-  try {
-    const factor = await Factor.findOne({
-      _id: req.params.factorId,
-      seller: req.user.id,
-    }).populate("customer products services seller");
-
-    res.status(httpStatus.OK).json({
-      msg: "your factor found",
-      status: "success",
-      factor,
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
-      status: "error",
-      msg: "خطای داخلی سرور. دوباره امتحان کنید",
-    });
-  }
-};
-
-// # description -> HTTP VERB -> Accesss
-// # create factor by authenticated seller -> POST -> sellers (PRIVATE)
-exports.createFactor = async (req, res) => {
-  try {
-    res.json({
-      seller: "684755695a9955ec1da33dfd",
-      customer: req.body.customer,
-      factorDate: req.body.factorDate,
-      products: req.body.products,
-      services: req.body.services,
-      tax: req.body.tax,
-      factorType: req.body.factorType,
-      totalPrice,
-    });
-
-    // // Validate at least one product or service
-    // if (
-    //   (!req.body.products || req.body.products.length === 0) &&
-    //   (!req.body.services || req.body.services.length === 0)
-    // ) {
-    //   return res.status(400).json({
-    //     status: "error",
-    //     msg: "Factor must contain at least one product or service",
-    //   });
-    // }
-
-    // const newFactor = await Factor.create({
-    // seller:req.user.id,
-    // customer:req.body.customer,
-    // factorDate:req.body.factorDate,
-    // products:req.body.products,
-    // services:req.body.services,
-    // tax:req.body.tax,
-    // factorType:req.body.factorType,
-    // totalPrice
-    // });
-
-    // res.status(201).json({
-    //   status: "success",
-    //   data: {
-    //     factor: newFactor,
-    //   },
-    // });
-  } catch (err) {
-    console.log(err);
-    if (err.name === "ValidationError") {
-      const messages = Object.values(err.errors).map((val) => val.message);
-      return res.status(400).json({
-        status: "error",
-        msg: messages.join(". "),
-      });
-    }
-    res.status(500).json({
-      status: "error",
-      msg: "خطای داخلی سرور. دوباره امتحان کنید",
-    });
-  }
-};
-
-// /**
-//  * @desc    Get single factor
-//  * @route   GET /api/factors/:id
-//  */
-// exports.getFactor = async (req, res) => {
-//   try {
-//     const factor = await Factor.findById(req.params.bankaccountId).populate(
-//       "customer products services"
-//     );
-
-//     if (!factor) {
-//       return res.status(404).json({
-//         status: "error",
-//         msg: "No factor found with that ID",
-//       });
-//     }
-
-//     // Check authorization
-//     if (
-//       req.user.role !== "admin" &&
-//       factor.customer._id.toString() !== req.user.id
-//     ) {
-//       return res.status(403).json({
-//         status: "error",
-//         msg: "You are not authorized to access this factor",
-//       });
-//     }
-
-//     res.status(200).json({
-//       status: "success",
-//       data: {
-//         factor,
-//       },
-//     });
-//   } catch (err) {
-// console.log(err)
-//     res.status(500).json({
-//       status: "error",
-//       msg: "خطای داخلی سرور. دوباره امتحان کنید",
-//     });
-//   }
-// };
-
-// /**
-//  * @desc    Update factor
-//  * @route   PATCH /api/factors/:id
-//  */
-// exports.updateFactor = async (req, res) => {
-//   try {
-//     const factor = await Factor.findById(req.params.bankaccountId);
-
-//     if (!factor) {
-//       return res.status(404).json({
-//         status: "error",
-//         msg: "No factor found with that ID",
-//       });
-//     }
-
-//     // Check authorization
-//     if (
-//       req.user.role !== "admin" &&
-//       factor.customer.toString() !== req.user.id
-//     ) {
-//       return res.status(403).json({
-//         status: "error",
-//         msg: "You are not authorized to update this factor",
-//       });
-//     }
-
-//     // Prevent changing customer if not admin
-//     if (
-//       req.user.role !== "admin" &&
-//       req.body.customer &&
-//       req.body.customer !== req.user.id
-//     ) {
-//       return res.status(403).json({
-//         status: "error",
-//         msg: "You cannot change the customer of this factor",
-//       });
-//     }
-
-//     // Update factor
-//     const updatedFactor = await Factor.findByIdAndUpdate(
-//       req.params.bankaccountId,
-//       req.body,
-//       {
-//         new: true,
-//         runValidators: true,
-//       }
-//     );
-
-//     res.status(200).json({
-//       status: "success",
-//       data: {
-//         factor: updatedFactor,
-//       },
-//     });
-//   } catch (err) {
-// console.log(err)
-//     if (err.name === "ValidationError") {
-//       const messages = Object.values(err.errors).map((val) => val.message);
-//       return res.status(400).json({
-//         status: "error",
-//         msg: messages.join(". "),
-//       });
-//     }
-//     res.status(500).json({
-//       status: "error",
-//       msg: "خطای داخلی سرور. دوباره امتحان کنید",
-//     });
-//   }
-// };
-
-// /**
-//  * @desc    Delete factor (Admin only)
-//  * @route   DELETE /api/factors/:id
-//  */
-// exports.deleteFactor = async (req, res) => {
-//   try {
-//     if (req.user.role !== "admin") {
-//       return res.status(403).json({
-//         status: "error",
-//         msg: "You are not authorized to perform this action",
-//       });
-//     }
-
-//     const factor = await Factor.findByIdAndDelete(req.params.bankaccountId);
-
-//     if (!factor) {
-//       return res.status(404).json({
-//         status: "error",
-//         msg: "No factor found with that ID",
-//       });
-//     }
-
-//     res.status(204).json({
-//       status: "success",
-//       data: null,
-//     });
-//   } catch (err) {
-// console.log(err)
-//     res.status(500).json({
-//       status: "error",
-//       msg: "خطای داخلی سرور. دوباره امتحان کنید",
-//     });
-//   }
-// };
-
-// /**
-//  * @desc    Get factors for current user
-//  * @route   GET /api/factors/my-factors
-//  */
-// exports.getMyFactors = async (req, res) => {
-//   try {
-//     const factors = await Factor.find({ customer: req.user.id }).populate(
-//       "products services"
-//     );
-
-//     res.status(200).json({
-//       status: "success",
-//       results: factors.length,
-//       data: {
-//         factors,
-//       },
-//     });
-//   } catch (err) {
-// console.log(err)
-//     res.status(500).json({
-//       status: "error",
-//       msg: "خطای داخلی سرور. دوباره امتحان کنید",
-//     });
-//   }
-// };
 
 // *********************************************************************************
 // ************************************ Products ***********************************
@@ -3603,6 +3322,313 @@ exports.deleteFactor = async (req, res) => {
 
     if (findFactor) {
       await Factor.findByIdAndDelete(req.params.factorId);
+
+      return res.status(httpStatus.OK).json({
+        msg: "فاکتور شماپاک شد",
+        status: "success",
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "درخواست شما نامعتبر است",
+        status: "failure",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+
+// // ******************************************************************************
+// ************************************ Refund **********************************
+// *********************************************************************************
+
+// # description -> HTTP VERB -> Accesss
+// # get all Refund -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/refunds/:refundType
+exports.getAllRefunds = async (req, res) => {
+  try {
+    const refunds = await Refund.find({
+      seller: req.user.id,
+      refundType: req.params.refundType,
+    }).populate("seller");
+
+    if (refunds && refunds.length > 0) {
+      return res.status(httpStatus.OK).json({
+        msg: "تمام استردادهای شما پیدا شدند",
+        status: "success",
+        count: refunds.length,
+        refunds,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "هنوز استرداد اضافه نشده است",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # get single refund -> GET -> sellers (PRIVATE)
+// # route -> /api/sellers/refunds/:refundType/:refundId
+exports.getSingleRefund = async (req, res) => {
+  try {
+    const refund = await Refund.findOne({
+      seller: req.user.id,
+      _id: req.params.refundId,
+      refundType: req.params.refundType,
+    }).populate("seller");
+
+    if (refund) {
+      return res.status(httpStatus.OK).json({
+        msg: "استرداد شماپیدا شد",
+        status: "success",
+        refund,
+      });
+    } else {
+      return res.status(httpStatus.NOT_FOUND).json({
+        msg: "استرداد پیدا نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # create refund -> POST -> sellers (PRIVATE)
+// # route -> /api/sellers/refunds
+exports.createRefund = async (req, res) => {
+  const {
+    salesman,
+    customer,
+    refundDate,
+    refundType,
+    products,
+    services,
+    moreInfo
+  } = req.body;
+
+  try {
+    if (
+      !salesman ||
+      !customer ||
+      !refundDate ||
+      !refundType ||
+      !products ||
+      !services ||
+      !moreInfo 
+    ) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "برای ایجاد فاکتور باید همه فیلدها را پر کنید.",
+        status: "failure",
+      });
+    }
+
+    const refundPath = req.file
+      ? req.file.path.replace("public", "")
+      : undefined;
+
+    let newRefund = await Refund.create({
+      image: refundPath || "default.jpg",
+      seller: req.user.id,
+      salesman,
+      customer,
+      refundDate,
+      products,
+      services,
+      refundType,
+    });
+
+    if (newRefund) {
+      return res.status(httpStatus.OK).json({
+        msg: "استرداد شماایجاد شد",
+        status: "success",
+        fund: newRefund,
+      });
+    } else {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        msg: "استرداد ایجاد نشد",
+        status: "success",
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update refund -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/refunds/:refundType/:refundId/update-refund
+exports.updateRefund = async (req, res) => {
+  try {
+    const {
+      salesman,
+      customer,
+      refundDate,
+      refundType,
+      products,
+      services,
+      moreInfo
+    } = req.body;
+
+    const updateData = {
+      salesman,
+      customer,
+      refundDate,
+      refundType,
+      products,
+      services,
+      moreInfo
+    };
+
+    const updatedRefund = await Refund.findByIdAndUpdate(
+      req.params.refundId,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedRefund) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "استرداد مورد نظر یافت نشد",
+      });
+    }
+
+    return res.status(httpStatus.OK).json({
+      msg: "اطلاعات استرداد با موفقیت ویرایش شد",
+      status: "success",
+      fund: updatedRefund,
+    });
+  } catch (err) {
+    console.error(err);
+
+    // Handle specific mongoose errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه استرداد نامعتبر است",
+      });
+    }
+
+    if (err.name === "ValidationError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "فاکتور‌های ارسالی نامعتبر هستند",
+        errors: err.errors,
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطای داخلی سرور. لطفاً دوباره امتحان کنید",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # update refund image -> PUT -> sellers (PRIVATE)
+// # route -> /api/sellers/refunds/:refundType/:refundId/update-refund-image
+exports.updateRefundImage = async (req, res) => {
+  try {
+    // 1. Validate image exists
+    if (!req.file) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "لطفاً یک تصویر معتبر ارسال کنید",
+      });
+    }
+
+    // 2. Validate file type (optional but recommended)
+    const validMimeTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validMimeTypes.includes(req.file.mimetype)) {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "فرمت تصویر نامعتبر است. فقط تصاویر JPEG, PNG و WebP قابل قبول هستند",
+      });
+    }
+
+    // 3. Update Bank fund image (only if they belong to the requesting seller)
+    const updatedFactor = await Factor.findOneAndUpdate(
+      {
+        _id: req.params.refundId,
+        seller: req.user.id,
+      },
+      {
+        image: req.file.path,
+        imageMimeType: req.file.mimetype, // Store mime type for future reference
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedFactor) {
+      return res.status(httpStatus.NOT_FOUND).json({
+        status: "error",
+        msg: "فاکتور مورد نظر یافت نشد یا شما مجوز ویرایش آن را ندارید",
+      });
+    }
+
+    // 5. Return success response
+    return res.status(httpStatus.OK).json({
+      status: "success",
+      msg: "تصویر فاکتور با موفقیت به‌روزرسانی شد",
+      image: updatedFactor.image,
+    });
+  } catch (err) {
+    console.error("Update fund image error:", err);
+
+    // Handle specific errors
+    if (err.name === "CastError") {
+      return res.status(httpStatus.BAD_REQUEST).json({
+        status: "error",
+        msg: "شناسه فاکتور نامعتبر است",
+      });
+    }
+
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+      status: "error",
+      msg: "خطا در سرور هنگام آپلود تصویر",
+    });
+  }
+};
+
+// # description -> HTTP VERB -> Accesss
+// # delete factor -> DELETE -> sellers (PRIVATE)
+// # route -> /api/sellers/refunds/:refundType/:refundId
+exports.deleteFactor = async (req, res) => {
+  try {
+    let findFactor = await Factor.findOne({
+      _id: req.params.refundId,
+    });
+
+    if (findFactor) {
+      await Factor.findByIdAndDelete(req.params.refundId);
 
       return res.status(httpStatus.OK).json({
         msg: "فاکتور شماپاک شد",

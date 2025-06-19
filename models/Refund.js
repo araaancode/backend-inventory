@@ -24,19 +24,19 @@ const refundSchema = new mongoose.Schema(
       required: [true, "Customer reference is required"],
     },
     // تاریخ و مشخصات
-    returnFactorDate: {
+    refundDate: {
       type: Date,
       required: [true, "Invoice date is required"],
       default: Date.now,
     },
     // نوع
-    returnFactorType: {
+    refundType: {
       type: String,
       enum: [
-        "returnFrombuy", // برگشت از خرید
-        "returnFromSale", // برگشت از فروش
+        "buy", // برگشت از خرید
+        "sale", // برگشت از فروش
       ],
-      default: "returnFrombuy",
+      default: "buy",
     },
     // کالاها
     products: [
