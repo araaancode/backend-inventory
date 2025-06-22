@@ -674,8 +674,8 @@ router.get(
   "/subscribe/:type",
   authenticateUser,
   authorizeRoles("seller"),
-  requestSubscription
+  sellerApiCtrls.requestSubscription
 );
-router.get("/subscribe/verify", verifyPayment);
+router.get("/subscribe/verify", sellerApiCtrls.verifyPayment);
 
 module.exports = router;

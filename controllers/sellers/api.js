@@ -20,13 +20,16 @@ const Order = require("../../models/Order");
 const Subscription = require("../../models/Subscription");
 const { ObjectId } = require("mongoose").Types;
 
+const ZarinpalCheckout = require('zarinpal-checkout');
+
 const zarinpal = ZarinpalCheckout.create(process.env.ZARINPAL_KEY, true);
 
-// Prices in Toman
+
 const PLAN_DETAILS = {
-  golden: { amount: 500000, storageLimit: 1000 }, // 500,000 Toman
-  silver: { amount: 200000, storageLimit: 500 }, // 200,000 Toman
+  golden: { amount: 500000, storageLimit: 1000 },
+  silver: { amount: 200000, storageLimit: 500 },
 };
+
 
 // *********************************************************************************
 // ************************************ Products ***********************************
@@ -4061,71 +4064,81 @@ exports.deleteOrder = async (req, res) => {
 // ************************************ Subscription *******************************
 // *********************************************************************************
 
+// Step 1: Request payment
 exports.requestSubscription = async (req, res) => {
   const { type } = req.params;
-  const userId = req.user.id; 
+  const userId = req.user.id;
 
-  if (!["golden", "silver"].includes(type)) {
-    return res.status(400).json({ message: "Invalid plan type." });
+  if (!['golden', 'silver'].includes(type)) {
+    return res.status(400).json({ message: 'Invalid plan type.' });
   }
 
-  try {
-    const { amount } = PLAN_DETAILS[type];
+  const { amount } = PLAN_DETAILS[type];
 
+  try {
     const response = await zarinpal.PaymentRequest({
       Amount: amount,
       CallbackURL: `${process.env.BASE_URL}/api/sellers/subscribe/verify?userId=${userId}&type=${type}`,
-      Description: `Subscription plan: ${type}`,
+      Description: `Yearly ${type} subscription`,
     });
 
     if (response.status === 100) {
-      return res.json({ url: response.url });
+      return res.json({ url: response.url }); 
     }
 
-    res
-      .status(400)
-      .json({ message: "Payment request failed", status: response.status });
+    return res.status(400).json({ message: 'Zarinpal rejected request', status: response.status });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error creating payment", error: err.message });
+    return res.status(500).json({ message: 'Payment request failed', error: err.message });
   }
 };
 
+// Step 2: Handle callback & verify
 exports.verifyPayment = async (req, res) => {
-  const { Authority, Status } = req.query;
-  const { userId, type } = req.query;
+  const { Authority, Status, userId, type } = req.query;
+
+  if (Status !== 'OK') {
+    return res.redirect(`${process.env.BASE_URL}/payment/failure`);
+  }
 
   const plan = PLAN_DETAILS[type];
-  if (!plan) return res.status(400).json({ message: "Invalid plan type." });
+  if (!plan) return res.status(400).json({ message: 'Invalid plan type.' });
 
   try {
-    const response = await zarinpal.PaymentVerification({
+    const result = await zarinpal.PaymentVerification({
       Amount: plan.amount,
       Authority,
     });
 
-    if (response.status === 100) {
-      const subscription = new Subscription({
-        seller: userId,
-        type,
-        features: {
-          storageLimit: plan.storageLimit,
-        },
-      });
-
-      await subscription.save();
-
-      // Optionally update user subscription field
-      // await User.findByIdAndUpdate(userId, { subscription: subscription._id });
-
-      return res.redirect(`${process.env.BASE_URL}/success`);
-    } else {
+    if (result.status !== 100) {
       return res.redirect(`${process.env.BASE_URL}/payment/failure`);
     }
+
+    // Deactivate existing subscriptions
+    await Subscription.updateMany(
+      { seller: userId, isActive: true },
+      { $set: { isActive: false } }
+    );
+
+    // Create new subscription
+    const start = new Date();
+    const end = new Date(start);
+    end.setFullYear(end.getFullYear() + 1);
+
+    const subscription = new Subscription({
+      seller: userId,
+      type,
+      startDate: start,
+      endDate: end,
+      isActive: true,
+      features: {
+        storageLimit: plan.storageLimit,
+      },
+    });
+
+    await subscription.save();
+
+    return res.redirect(`${process.env.BASE_URL}/payment/success`);
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Payment verification error", error: err.message });
+    return res.status(500).json({ message: 'Payment verification error', error: err.message });
   }
 };
