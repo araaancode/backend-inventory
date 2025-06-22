@@ -17,7 +17,16 @@ const Financial = require("../../models/Financial");
 const Refund = require("../../models/Refund");
 const Catalog = require("../../models/Catalog");
 const Order = require("../../models/Order");
+const Subscription = require("../../models/Subscription");
 const { ObjectId } = require("mongoose").Types;
+
+const zarinpal = ZarinpalCheckout.create(process.env.ZARINPAL_KEY, true);
+
+// Prices in Toman
+const PLAN_DETAILS = {
+  golden: { amount: 500000, storageLimit: 1000 }, // 500,000 Toman
+  silver: { amount: 200000, storageLimit: 500 }, // 200,000 Toman
+};
 
 // *********************************************************************************
 // ************************************ Products ***********************************
@@ -4045,5 +4054,78 @@ exports.deleteOrder = async (req, res) => {
       status: "error",
       msg: "خطای داخلی سرور. دوباره امتحان کنید",
     });
+  }
+};
+
+// // ******************************************************************************
+// ************************************ Subscription *******************************
+// *********************************************************************************
+
+exports.requestSubscription = async (req, res) => {
+  const { type } = req.params;
+  const userId = req.user.id; 
+
+  if (!["golden", "silver"].includes(type)) {
+    return res.status(400).json({ message: "Invalid plan type." });
+  }
+
+  try {
+    const { amount } = PLAN_DETAILS[type];
+
+    const response = await zarinpal.PaymentRequest({
+      Amount: amount,
+      CallbackURL: `${process.env.BASE_URL}/api/sellers/subscribe/verify?userId=${userId}&type=${type}`,
+      Description: `Subscription plan: ${type}`,
+    });
+
+    if (response.status === 100) {
+      return res.json({ url: response.url });
+    }
+
+    res
+      .status(400)
+      .json({ message: "Payment request failed", status: response.status });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Error creating payment", error: err.message });
+  }
+};
+
+exports.verifyPayment = async (req, res) => {
+  const { Authority, Status } = req.query;
+  const { userId, type } = req.query;
+
+  const plan = PLAN_DETAILS[type];
+  if (!plan) return res.status(400).json({ message: "Invalid plan type." });
+
+  try {
+    const response = await zarinpal.PaymentVerification({
+      Amount: plan.amount,
+      Authority,
+    });
+
+    if (response.status === 100) {
+      const subscription = new Subscription({
+        seller: userId,
+        type,
+        features: {
+          storageLimit: plan.storageLimit,
+        },
+      });
+
+      await subscription.save();
+
+      // Optionally update user subscription field
+      // await User.findByIdAndUpdate(userId, { subscription: subscription._id });
+
+      return res.redirect(`${process.env.BASE_URL}/success`);
+    } else {
+      return res.redirect(`${process.env.BASE_URL}/payment/failure`);
+    }
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Payment verification error", error: err.message });
   }
 };

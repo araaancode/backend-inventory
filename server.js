@@ -42,10 +42,6 @@ const app = express();
 // ********************************
 // ************ routes ************
 // ********************************
-// customer routes
-const customerAuthRoutes = require("./routes/customers/auth");
-const customerApiRoutes = require("./routes/customers/api");
-
 // seller routes
 const sellerAuthRoutes = require("./routes/sellers/auth");
 const sellerApiRoutes = require("./routes/sellers/api");
@@ -119,10 +115,6 @@ if (!isProduction) {
 // ********************************
 // ***** API Routes *****
 // ********************************
-// customer routes
-app.use("/api/customers/auth", customerAuthRoutes);
-// app.use("/api/customers", customerApiRoutes);
-
 // seller routes
 app.use("/api/sellers/auth", sellerAuthRoutes);
 app.use("/api/sellers", sellerApiRoutes);
